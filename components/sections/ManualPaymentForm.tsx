@@ -161,7 +161,7 @@ const ManualPaymentForm = ({ course, onClose, onSubmitted }: ManualPaymentFormPr
             <div className="space-y-2">
               <Label htmlFor="fatherName" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
-                Father's Name
+                Father&apos;s Name
               </Label>
               <Input
                 id="fatherName"
@@ -289,8 +289,8 @@ const ManualPaymentForm = ({ course, onClose, onSubmitted }: ManualPaymentFormPr
                 <SelectContent>
                   <SelectItem value="matric">Matric</SelectItem>
                   <SelectItem value="intermediate">Intermediate</SelectItem>
-                  <SelectItem value="bachelor">Bachelor's Degree</SelectItem>
-                  <SelectItem value="master">Master's Degree</SelectItem>
+                  <SelectItem value="bachelor">Bachelor&apos;s Degree</SelectItem>
+                  <SelectItem value="master">Master&apos;s Degree</SelectItem>
                   <SelectItem value="phd">PhD</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>

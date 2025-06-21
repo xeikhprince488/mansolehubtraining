@@ -1,19 +1,26 @@
 import CourseCard from "@/components/courses/CourseCard"
 import { db } from "@/lib/db"
-import { auth } from "@clerk/nextjs/server"
+import { currentUser } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import { BookOpen, Clock, Award, TrendingUp, GraduationCap } from "lucide-react"
 
 const LearningPage = async () => {
-  const { userId } = await auth()
+  const user = await currentUser()
 
-  if (!userId) {
+  if (!user || !user.id) {
+    return redirect('/sign-in')
+  }
+
+  // Get the user's email address
+  const customerEmail = user.emailAddresses?.[0]?.emailAddress
+  
+  if (!customerEmail) {
     return redirect('/sign-in')
   }
 
   const purchasedCourses = await db.purchase.findMany({
     where: {
-      customerId: userId,
+      customerEmail: customerEmail, // Changed from customerId to customerEmail
     },
     select: {
       course: {
