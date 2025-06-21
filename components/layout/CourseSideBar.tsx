@@ -1,10 +1,8 @@
 import { db } from "@/lib/db";
 import { Course, Section } from "@prisma/client";
-import Link from "next/link";
-import Image from "next/image";
-import { Progress } from "../ui/progress";
-import { BookOpen, Play, CheckCircle, Clock, Award, Target, Home, User, Settings, LogOut, GraduationCap, FileText } from "lucide-react";
 import { CourseSideBarClient } from "./CourseSideBarClient";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
 interface CourseSideBarProps {
   course: Course & { sections: Section[] };
@@ -12,6 +10,25 @@ interface CourseSideBarProps {
 }
 
 const CourseSideBar = async ({ course, studentId }: CourseSideBarProps) => {
+  const { userId } = await auth();
+  const user = await currentUser();
+
+  if (!userId || !user?.emailAddresses?.[0]?.emailAddress) {
+    return redirect("/");
+  }
+
+  const customerEmail = user.emailAddresses[0].emailAddress;
+
+  // Check for purchase using email-based system
+  const purchase = await db.purchase.findUnique({
+    where: {
+      customerEmail_courseId: {
+        customerEmail: customerEmail,
+        courseId: course.id,
+      },
+    },
+  });
+
   const publishedSections = await db.section.findMany({
     where: {
       courseId: course.id,
@@ -24,17 +41,8 @@ const CourseSideBar = async ({ course, studentId }: CourseSideBarProps) => {
 
   const publishedSectionIds = publishedSections.map((section) => section.id);
 
-  const purchase = await db.purchase.findUnique({
-    where: {
-      customerId_courseId: {
-        customerId: studentId,
-        courseId: course.id,
-      },
-    },
-  });
-
   const completedSections = await db.progress.count({
-    where:{
+    where: {
       studentId,
       sectionId: {
         in: publishedSectionIds,

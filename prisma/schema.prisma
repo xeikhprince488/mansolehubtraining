@@ -38,6 +38,10 @@ model Course {
   purchases Purchase[]
   attendances Attendance[]
 
+  manualPaymentRequests ManualPaymentRequest[]
+
+  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
@@ -45,6 +49,7 @@ model Course {
   @@index([subCategoryId])
   @@index([levelId])
 }
+
 
 model Category {
   id            String        @id @default(uuid())
@@ -138,7 +143,7 @@ model Progress {
 
 model Purchase {
   id         String @id @default(uuid())
-  customerId String 
+  customerEmail String // Changed from customerId to customerEmail
 
   courseId String
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -152,7 +157,35 @@ model Purchase {
 
   @@index([courseId])
   @@index([studentId])
-  @@unique([customerId, courseId])
+  @@unique([customerEmail, courseId]) // Changed from customerId_courseId to customerEmail_courseId
+}
+
+model ManualPaymentRequest {
+  id              String   @id @default(uuid())
+  studentEmail    String
+  studentName     String?
+  fatherName      String?
+  phoneNumber     String?
+  whatsappNumber  String?
+  cnicNumber      String?
+  dateOfBirth     String?
+  address         String?  @db.Text
+  city            String?
+  qualification   String?
+  occupation      String?
+  courseId        String
+  course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  transactionImage String  // URL to uploaded transaction proof
+  bankDetails     String   // Bank account details used
+  status          String   @default("pending") // pending, approved, rejected
+  approvedBy      String?  // Instructor who approved
+  rejectionReason String?  @db.Text
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now())
+  
+  @@index([courseId])
+  @@index([studentEmail])
 }
 
 model StripeCustomer {

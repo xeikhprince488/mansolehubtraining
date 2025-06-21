@@ -9,8 +9,10 @@ import { redirect } from "next/navigation";
 
 // Define instructor emails
 const instructorEmails = [
-  'programmingworld488@gmail.com',
-  'ceo@largifysolutions.com'
+   'programmingworld488@gmail.com',
+  'ceo@largifysolutions.com',
+  'mansol.skp@gmail.com',
+  'umarpia4@gmail.com'
 ];
 
 export default async function Home() {

@@ -11,8 +11,10 @@ const isPublicRoute = createRouteMatcher([
 
 // Define instructor and teacher emails
 const instructorEmails = [
-  'programmingworld488@gmail.com',
-  'ceo@largifysolutions.com'
+   'programmingworld488@gmail.com',
+  'ceo@largifysolutions.com',
+  'mansol.skp@gmail.com',
+  'umarpia4@gmail.com'
 ];
 
 export default clerkMiddleware(async (auth, request) => {

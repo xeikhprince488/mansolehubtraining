@@ -4,6 +4,7 @@ import { UserButton, useAuth } from "@clerk/nextjs";
 import { Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,9 +27,16 @@ const Topbar = () => {
         <Link href="/" className="flex items-center group">
           <div className="relative">
             <div className="absolute -inset-2 bg-gradient-to-r from-blue-600/10 to-indigo-600/10 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-500 blur-sm" />
-            <h1 className="relative text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent transition-all duration-300 group-hover:scale-[1.02] filter drop-shadow-sm">
-              ManSoleHub
-            </h1>
+            <div className="relative transition-all duration-300 group-hover:scale-[1.02] filter drop-shadow-sm">
+              <Image
+                src="/header_logo/main-logo.png"
+                alt="ManSolHub Logo"
+                width={100}
+                height={48}
+                className="h-12 w-auto object-contain"
+                priority
+              />
+            </div>
           </div>
         </Link>
 

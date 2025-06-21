@@ -1,21 +1,28 @@
 import SectionsDetails from "@/components/sections/SectionsDetails";
 import { db } from "@/lib/db";
-// import { auth } from "@clerk/nextjs/server";
 import { Resource } from "@prisma/client";
 import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
 const SectionDetailsPage = async ({
   params,
 }: {
   params: { courseId: string; sectionId: string };
 }) => {
-  const { courseId, sectionId } = params;
   const { userId } = await auth();
+  const user = await currentUser();
 
-  if (!userId) {
+  if (!userId || !user?.emailAddresses?.[0]?.emailAddress) {
     return redirect("/sign-in");
   }
+
+  const customerEmail = user.emailAddresses[0].emailAddress;
+
+  console.log("Current user ID:", userId);
+  console.log("Customer email:", customerEmail);
+  console.log("Course ID:", params.courseId);
+
+  const { courseId, sectionId } = params;
 
   const course = await db.course.findUnique({
     where: {
@@ -49,12 +56,14 @@ const SectionDetailsPage = async ({
 
   const purchase = await db.purchase.findUnique({
     where: {
-      customerId_courseId: {
-        customerId: userId,
-        courseId,
+      customerEmail_courseId: {
+        customerEmail: customerEmail,
+        courseId: params.courseId,
       },
     },
   });
+
+  console.log("Found purchase:", purchase);
 
   let muxData = null;
   let resources: Resource[] = [];

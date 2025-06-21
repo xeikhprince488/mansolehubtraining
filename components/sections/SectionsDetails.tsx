@@ -9,9 +9,10 @@ import {
   Section,
 } from "@prisma/client";
 import toast from "react-hot-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { File, Loader2, Lock, Play, Download, BookOpen, Clock, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import ReadText from "@/components/custom/ReadText";
@@ -20,6 +21,11 @@ import Link from "next/link";
 import ProgressButton from "./ProgressButton";
 import SectionMenu from "../layout/SectionMenu";
 import dynamic from "next/dynamic";
+
+import ManualPaymentForm from "./ManualPaymentForm";
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { CreditCard } from "lucide-react";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface SectionsDetailsProps {
   course: Course & { sections: Section[] };
@@ -39,7 +45,31 @@ const SectionsDetails = ({
   progress,
 }: SectionsDetailsProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const isLocked = !purchase && !section.isFree;
+  const [showManualPayment, setShowManualPayment] = useState(false);
+  const [currentPurchase, setCurrentPurchase] = useState(purchase);
+  const router = useRouter();
+  const isLocked = !currentPurchase && !section.isFree;
+
+  // Check for purchase updates every 30 seconds if course is locked
+  useEffect(() => {
+    if (isLocked) {
+      const checkPurchaseStatus = async () => {
+        try {
+          const response = await axios.get(`/api/courses/${course.id}/purchase-status`);
+          if (response.data.hasPurchase && !currentPurchase) {
+            setCurrentPurchase(response.data.purchase);
+            toast.success("🎉 Course unlocked! You now have access to all content.");
+            router.refresh(); // Refresh to get updated data
+          }
+        } catch (error) {
+          // Silently handle errors
+        }
+      };
+
+      const interval = setInterval(checkPurchaseStatus, 30000); // Check every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [isLocked, course.id, currentPurchase, router]);
 
   const buyCourse = async () => {
     try {
@@ -52,6 +82,33 @@ const SectionsDetails = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePaymentOption = () => {
+    setShowManualPayment(true);
+  };
+
+  const handlePaymentSubmitted = () => {
+    setShowManualPayment(false);
+    toast.success("Payment request submitted! You'll be notified once approved.");
+    
+    // Start checking for approval every 10 seconds
+    const checkApproval = setInterval(async () => {
+      try {
+        const response = await axios.get(`/api/courses/${course.id}/purchase-status`);
+        if (response.data.hasPurchase) {
+          setCurrentPurchase(response.data.purchase);
+          toast.success("🎉 Payment approved! Course unlocked!");
+          router.refresh();
+          clearInterval(checkApproval);
+        }
+      } catch (error) {
+        // Continue checking
+      }
+    }, 10000);
+
+    // Stop checking after 10 minutes
+    setTimeout(() => clearInterval(checkApproval), 600000);
   };
 
   return (
@@ -88,24 +145,17 @@ const SectionsDetails = ({
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
               <SectionMenu course={course} />
-              {!purchase ? (
-                <Button 
-                  onClick={buyCourse}
-                  disabled={isLoading}
-                  className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 px-6 py-3"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-4 w-4 mr-2" />
-                      Buy this course
-                    </>
-                  )}
-                </Button>
+              {!currentPurchase ? (
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button 
+                    onClick={handlePaymentOption}
+                    disabled={isLoading}
+                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 px-6 py-3"
+                  >
+                    <Play className="h-4 w-4 mr-2" />
+                    Buy Course
+                  </Button>
+                </div>
               ) : (
                 <ProgressButton
                   courseId={course.id}
@@ -153,21 +203,12 @@ const SectionsDetails = ({
                       </p>
                     </div>
                     <Button 
-                      onClick={buyCourse}
+                      onClick={handlePaymentOption}
                       disabled={isLoading}
                       className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
                     >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="h-4 w-4 mr-2" />
-                          Unlock Course
-                        </>
-                      )}
+                      <Play className="h-4 w-4 mr-2" />
+                      Unlock Course
                     </Button>
                   </div>
                 ) : (
@@ -270,6 +311,23 @@ const SectionsDetails = ({
           </div>
         </div>
       </div>
+
+      {/* Payment Dialog */}
+      <Dialog open={showManualPayment} onOpenChange={setShowManualPayment}>
+        <DialogContent className="p-0 border-0 bg-transparent max-w-2xl">
+          <VisuallyHidden>
+            <DialogTitle>Course Purchase Payment</DialogTitle>
+            <DialogDescription>
+              Complete your course purchase by submitting payment details and transaction proof
+            </DialogDescription>
+          </VisuallyHidden>
+          <ManualPaymentForm 
+            course={course} 
+            onClose={() => setShowManualPayment(false)}
+            onSubmitted={handlePaymentSubmitted}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

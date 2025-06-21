@@ -1,37 +1,38 @@
-import { db } from "@/lib/db";
-import { stripe } from "@/lib/stripe";
+import Stripe from "stripe";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
 
-export const POST = async (req: NextRequest) => {
-  const rawBody = await req.text();
+import { stripe } from "@/lib/stripe";
+import { db } from "@/lib/db";
+
+export async function POST(req: NextRequest) {
+  const body = await req.text();
   const signature = headers().get("Stripe-Signature") as string;
 
   let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(
-      rawBody,
+      body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
-  } catch (err: any) {
-    return new NextResponse(`Webhook error: ${err.message}`, { status: 400 });
+  } catch (error: any) {
+    return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 });
   }
 
   const session = event.data.object as Stripe.Checkout.Session;
-  const customerId = session?.metadata?.customerId;
+  const customerEmail = session?.metadata?.customerEmail;
   const courseId = session?.metadata?.courseId;
 
   if (event.type === "checkout.session.completed") {
-    if (!customerId || !courseId) {
+    if (!customerEmail || !courseId) {
       return new NextResponse("Missing metadata", { status: 400 });
     }
 
     await db.purchase.create({
       data: {
-        customerId,
+        customerEmail,
         courseId,
       },
     });
@@ -41,5 +42,5 @@ export const POST = async (req: NextRequest) => {
     });
   }
 
-  return new NextResponse("Success", { status: 200 });
-};
+  return new NextResponse(null, { status: 200 });
+}

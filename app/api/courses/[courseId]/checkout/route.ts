@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 
@@ -16,6 +17,8 @@ export const POST = async (
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
+    const customerEmail = user.emailAddresses[0].emailAddress;
+
     const course = await db.course.findUnique({
       where: { id: params.courseId, isPublished: true },
     });
@@ -26,7 +29,7 @@ export const POST = async (
 
     const purchase = await db.purchase.findUnique({
       where: {
-        customerId_courseId: { customerId: user.id, courseId: course.id },
+        customerEmail_courseId: { customerEmail: customerEmail, courseId: course.id },
       },
     });
 
@@ -38,28 +41,33 @@ export const POST = async (
       {
         quantity: 1,
         price_data: {
-          currency: "cad",
+          currency: "USD",
           product_data: {
             name: course.title,
+            description: course.description!,
           },
           unit_amount: Math.round(course.price! * 100),
         },
-      }
-    ]
+      },
+    ];
 
     let stripeCustomer = await db.stripeCustomer.findUnique({
-      where: { customerId: user.id },
-      select: { stripeCustomerId: true },
+      where: {
+        customerId: user.id, // Changed from userId to customerId
+      },
+      select: {
+        stripeCustomerId: true,
+      },
     });
 
     if (!stripeCustomer) {
       const customer = await stripe.customers.create({
-        email: user.emailAddresses[0].emailAddress,
+        email: customerEmail,
       });
 
       stripeCustomer = await db.stripeCustomer.create({
         data: {
-          customerId: user.id,
+          customerId: user.id, // Changed from userId to customerId
           stripeCustomerId: customer.id,
         },
       });
@@ -67,20 +75,19 @@ export const POST = async (
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomer.stripeCustomerId,
-      payment_method_types: ["card"],
       line_items,
       mode: "payment",
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/courses/${course.id}/overview?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/courses/${course.id}/overview?canceled=true`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/courses/${course.id}?success=1`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/courses/${course.id}?canceled=1`,
       metadata: {
         courseId: course.id,
-        customerId: user.id,
-      }
+        customerEmail: customerEmail,
+      },
     });
 
-    return NextResponse.json({ url: session.url })
-  } catch (err) {
-    console.log("[courseId_checkout_POST]", err);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return NextResponse.json({ url: session.url });
+  } catch (error) {
+    console.error("[COURSE_ID_CHECKOUT]", error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
 };

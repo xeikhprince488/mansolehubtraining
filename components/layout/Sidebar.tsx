@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart4, MonitorPlay, GraduationCap, Users } from "lucide-react";
+import { BarChart4, MonitorPlay, GraduationCap, Users, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -19,6 +19,12 @@ const Sidebar = () => {
       label: "Performance",
       path: "/instructor/performance",
       description: "View analytics"
+    },
+    {
+      icon: CreditCard,
+      label: "Payments",
+      path: "/instructor/payments",
+      description: "Manage payment requests"
     },
     {
       icon: Users,
