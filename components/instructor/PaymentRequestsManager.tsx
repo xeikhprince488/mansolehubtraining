@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import axios from "axios";
 import toast from "react-hot-toast";
 import Image from "next/image";
+import PaymentSearchBar from "./PaymentSearchBar";
 
 interface StudentProgress {
   totalSections: number;
@@ -64,28 +65,71 @@ interface PaymentRequest {
     studentProgress?: StudentProgress;
   }
 
-const PaymentRequestsManager = () => {
+interface PaymentRequestsManagerProps {
+  courses: { id: string; title: string }[];
+}
+
+interface SearchFilters {
+  searchTerm: string;
+  status: string;
+  courseId: string;
+}
+
+const PaymentRequestsManager = ({ courses }: PaymentRequestsManagerProps) => {
   const [requests, setRequests] = useState<PaymentRequest[]>([]);
+  const [filteredRequests, setFilteredRequests] = useState<PaymentRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<PaymentRequest | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    fetchPaymentRequests();
-  }, []);
-
-  const fetchPaymentRequests = async () => {
+  const fetchPaymentRequests = useCallback(async () => {
     try {
+      setIsLoading(true);
       const response = await axios.get("/api/instructor/payment-requests");
       setRequests(response.data);
+      setFilteredRequests(response.data);
     } catch (error) {
       console.error("Failed to fetch payment requests:", error);
       toast.error("Failed to load payment requests");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchPaymentRequests();
+  }, [fetchPaymentRequests]);
+
+  // Handle search and filtering
+  const handleSearch = useCallback((filters: SearchFilters) => {
+    let filtered = [...requests];
+
+    // Text search
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase();
+      filtered = filtered.filter((request) =>
+        request.studentName?.toLowerCase().includes(searchLower) ||
+        request.studentEmail?.toLowerCase().includes(searchLower) ||
+        request.course?.title?.toLowerCase().includes(searchLower) ||
+        request.phoneNumber?.toLowerCase().includes(searchLower) ||
+        request.city?.toLowerCase().includes(searchLower) ||
+        request.cnicNumber?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Status filter - only apply if status has a value and is not 'all'
+    if (filters.status && filters.status !== "all") {
+      filtered = filtered.filter((request) => request.status === filters.status);
+    }
+
+    // Course filter - only apply if courseId has a value and is not 'all'
+    if (filters.courseId && filters.courseId !== "all") {
+      filtered = filtered.filter((request) => request.courseId === filters.courseId);
+    }
+
+    setFilteredRequests(filtered);
+  }, [requests]);
 
   const handleApprove = async (requestId: string, courseId: string, studentEmail: string) => {
     setActionLoading(true);
@@ -179,357 +223,388 @@ const PaymentRequestsManager = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CreditCard className="h-5 w-5" />
-          Manual Payment Requests
-        </CardTitle>
-        <CardDescription>
-          Review and approve student payment requests for course access
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {requests.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            No payment requests found
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead>Course</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Progress</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {requests.map((request) => (
-                <TableRow key={request.id}>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="font-medium">{request.studentName}</div>
-                      <div className="text-sm text-gray-500">{request.studentEmail}</div>
-                      {request.phoneNumber && (
-                        <div className="text-sm text-gray-500">📱 {request.phoneNumber}</div>
-                      )}
-                      {request.city && (
-                        <div className="text-sm text-gray-500">📍 {request.city}</div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{request.course.title}</TableCell>
-                  <TableCell>${request.course.price}</TableCell>
-                  <TableCell>
-                    {request.studentProgress ? (
-                      <div className="space-y-2">
-                        {getProgressBadge(request.studentProgress.progressPercentage)}
-                        <div className="text-xs text-gray-500">
-                          {request.studentProgress.completedSections}/{request.studentProgress.totalSections} sections
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          📺 {formatWatchTime(request.studentProgress.totalWatchTimeMinutes * 60)} watched
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          🎯 {request.studentProgress.overallWatchPercentage}% video completion
+    <div className="space-y-6">
+      <PaymentSearchBar onSearch={handleSearch} courses={courses} />
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Manual Payment Requests
+          </CardTitle>
+          <CardDescription>
+            Review and approve student payment requests for course access
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {filteredRequests.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              {requests.length === 0 ? "No payment requests found" : "No payment requests found matching your criteria"}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Student</TableHead>
+                  <TableHead>Course</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Progress</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRequests.map((request) => (
+                  <TableRow key={request.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{request.studentName}</span>
+                          <span className="text-sm text-gray-500">{request.studentEmail}</span>
+                          {request.phoneNumber && (
+                            <span className="text-xs text-gray-400">{request.phoneNumber}</span>
+                          )}
                         </div>
                       </div>
-                    ) : (
-                      <Badge variant="outline" className="text-gray-600 border-gray-600">No Access</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(request.status)}</TableCell>
-                  <TableCell>{new Date(request.createdAt).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={() => setSelectedRequest(request)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>Payment Request Details</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-6">
-                            {/* Student Information Section */}
-                            <div className="border rounded-lg p-4">
-                              <h3 className="text-lg font-semibold mb-4 text-blue-600">Student Information</h3>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <Label>Student Name</Label>
-                                  <p className="font-medium">{request.studentName}</p>
-                                </div>
-                                <div>
-                                  <Label>Father&apos;s Name</Label>
-                                  <p className="font-medium">{request.fatherName || 'Not provided'}</p>
-                                </div>
-                                <div>
-                                  <Label>Email</Label>
-                                  <p className="font-medium">{request.studentEmail}</p>
-                                </div>
-                                <div>
-                                  <Label>Phone Number</Label>
-                                  <p className="font-medium">{request.phoneNumber || 'Not provided'}</p>
-                                </div>
-                                <div>
-                                  <Label>WhatsApp Number</Label>
-                                  <p className="font-medium">{request.whatsappNumber || 'Not provided'}</p>
-                                </div>
-                                <div>
-                                  <Label>CNIC Number</Label>
-                                  <p className="font-medium">{request.cnicNumber || 'Not provided'}</p>
-                                </div>
-                                <div>
-                                  <Label>Date of Birth</Label>
-                                  <p className="font-medium">{request.dateOfBirth || 'Not provided'}</p>
-                                </div>
-                                <div>
-                                  <Label>Qualification</Label>
-                                  <p className="font-medium">{request.qualification || 'Not provided'}</p>
-                                </div>
-                                <div>
-                                  <Label>Occupation</Label>
-                                  <p className="font-medium">{request.occupation || 'Not provided'}</p>
-                                </div>
-                                <div>
-                                  <Label>City</Label>
-                                  <p className="font-medium">{request.city || 'Not provided'}</p>
-                                </div>
-                              </div>
-                              <div className="mt-4">
-                                <Label>Address</Label>
-                                <p className="font-medium">{request.address || 'Not provided'}</p>
-                              </div>
-                            </div>
-
-                            {/* Course Information Section */}
-                            <div className="border rounded-lg p-4">
-                              <h3 className="text-lg font-semibold mb-4 text-green-600">Course Information</h3>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <Label>Course</Label>
-                                  <p className="font-medium">{request.course.title}</p>
-                                </div>
-                                <div>
-                                  <Label>Amount</Label>
-                                  <p className="font-medium">${request.course.price}</p>
-                                </div>
-                                <div>
-                                  <Label>Request Date</Label>
-                                  <p className="font-medium">{new Date(request.createdAt).toLocaleDateString()}</p>
-                                </div>
-                                <div>
-                                  <Label>Status</Label>
-                                  <div className="mt-1">{getStatusBadge(request.status)}</div>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Student Progress Section */}
-                            {request.studentProgress && (
-                              <div className="border rounded-lg p-4">
-                                <h3 className="text-lg font-semibold mb-4 text-indigo-600 flex items-center gap-2">
-                                  <TrendingUp className="h-5 w-5" />
-                                  Learning Progress
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{request.course.title}</span>
+                        <span className="text-sm text-gray-500">Course ID: {request.courseId}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-semibold">${request.course.price}</span>
+                    </TableCell>
+                    <TableCell>
+                      {request.studentProgress ? (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <Progress value={request.studentProgress.progressPercentage} className="w-16 h-2" />
+                            <span className="text-xs">{request.studentProgress.progressPercentage}%</span>
+                          </div>
+                          {getProgressBadge(request.studentProgress.progressPercentage)}
+                        </div>
+                      ) : (
+                        <Badge variant="outline" className="text-gray-600 border-gray-600">No Progress</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(request.status)}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">
+                        {new Date(request.createdAt).toLocaleDateString()}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle className="flex items-center gap-2">
+                                <User className="h-5 w-5" />
+                                Payment Request Details - {request.studentName}
+                              </DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-6">
+                              {/* Student Information */}
+                              <div className="bg-gray-50 p-4 rounded-lg">
+                                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                                  <User className="h-4 w-4" />
+                                  Student Information
                                 </h3>
-                                
-                                {/* Progress Overview */}
-                                <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-                                  <div className="bg-blue-50 p-4 rounded-lg">
-                                    <div className="text-2xl font-bold text-blue-600">
-                                      {request.studentProgress.progressPercentage}%
-                                    </div>
-                                    <div className="text-sm text-blue-700">Overall Progress</div>
-                                    <Progress value={request.studentProgress.progressPercentage} className="mt-2" />
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <Label className="font-medium">Full Name</Label>
+                                    <p className="text-sm">{request.studentName}</p>
                                   </div>
-                                  
-                                  <div className="bg-green-50 p-4 rounded-lg">
-                                    <div className="text-2xl font-bold text-green-600">
-                                      {request.studentProgress.completedSections}
-                                    </div>
-                                    <div className="text-sm text-green-700">
-                                      of {request.studentProgress.totalSections} Sections
-                                    </div>
+                                  <div>
+                                    <Label className="font-medium">Email Address</Label>
+                                    <p className="text-sm">{request.studentEmail}</p>
                                   </div>
-                                  
-                                  <div className="bg-purple-50 p-4 rounded-lg">
-                                    <div className="text-2xl font-bold text-purple-600">
-                                      {formatStudyTime(request.studentProgress.totalStudyTime)}
+                                  {request.fatherName && (
+                                    <div>
+                                      <Label className="font-medium">Father&apos;s Name</Label>
+                                      <p className="text-sm">{request.fatherName}</p>
                                     </div>
-                                    <div className="text-sm text-purple-700">Study Time</div>
-                                  </div>
-                                  
-                                  <div className="bg-indigo-50 p-4 rounded-lg">
-                                    <div className="text-2xl font-bold text-indigo-600">
-                                      {request.studentProgress.overallWatchPercentage}%
+                                  )}
+                                  {request.phoneNumber && (
+                                    <div>
+                                      <Label className="font-medium">Phone Number</Label>
+                                      <p className="text-sm">{request.phoneNumber}</p>
                                     </div>
-                                    <div className="text-sm text-indigo-700">Video Completion</div>
-                                  </div>
-                                  
-                                  <div className="bg-cyan-50 p-4 rounded-lg">
-                                    <div className="text-2xl font-bold text-cyan-600">
-                                      {formatWatchTime(request.studentProgress.totalWatchTimeMinutes * 60)}
+                                  )}
+                                  {request.whatsappNumber && (
+                                    <div>
+                                      <Label className="font-medium">WhatsApp Number</Label>
+                                      <p className="text-sm">{request.whatsappNumber}</p>
                                     </div>
-                                    <div className="text-sm text-cyan-700">
-                                      of {formatWatchTime(request.studentProgress.totalVideoDurationMinutes * 60)} total
+                                  )}
+                                  {request.cnicNumber && (
+                                    <div>
+                                      <Label className="font-medium">CNIC Number</Label>
+                                      <p className="text-sm">{request.cnicNumber}</p>
                                     </div>
-                                  </div>
-                                  
-                                  <div className="bg-orange-50 p-4 rounded-lg">
-                                    <div className="text-sm font-bold text-orange-600">
-                                      {request.studentProgress.lastActivity 
-                                        ? new Date(request.studentProgress.lastActivity).toLocaleDateString()
-                                        : 'No Activity'
-                                      }
+                                  )}
+                                  {request.dateOfBirth && (
+                                    <div>
+                                      <Label className="font-medium">Date of Birth</Label>
+                                      <p className="text-sm">{new Date(request.dateOfBirth).toLocaleDateString()}</p>
                                     </div>
-                                    <div className="text-sm text-orange-700">Last Activity</div>
-                                  </div>
+                                  )}
+                                  {request.address && (
+                                    <div>
+                                      <Label className="font-medium">Address</Label>
+                                      <p className="text-sm">{request.address}</p>
+                                    </div>
+                                  )}
+                                  {request.city && (
+                                    <div>
+                                      <Label className="font-medium">City</Label>
+                                      <p className="text-sm">{request.city}</p>
+                                    </div>
+                                  )}
+                                  {request.qualification && (
+                                    <div>
+                                      <Label className="font-medium">Qualification</Label>
+                                      <p className="text-sm">{request.qualification}</p>
+                                    </div>
+                                  )}
+                                  {request.occupation && (
+                                    <div>
+                                      <Label className="font-medium">Occupation</Label>
+                                      <p className="text-sm">{request.occupation}</p>
+                                    </div>
+                                  )}
                                 </div>
+                              </div>
 
-                                {/* Section Progress Details */}
-                                <div className="space-y-3">
-                                  <h4 className="font-semibold text-gray-800">Section Progress Details</h4>
-                                  <div className="max-h-60 overflow-y-auto">
-                                    {request.studentProgress.sectionProgress.map((section, index) => (
-                                      <div key={section.sectionId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2">
-                                        <div className="flex items-center gap-3">
-                                          <div className="flex items-center gap-2">
-                                            {section.hasVideo && <PlayCircle className="h-4 w-4 text-blue-500" />}
-                                            <BookOpen className="h-4 w-4 text-gray-500" />
-                                          </div>
-                                          <div className="flex-1">
-                                            <div className="font-medium text-sm">
-                                              {section.sectionPosition}. {section.sectionTitle}
-                                            </div>
-                                            {section.hasVideo && (
-                                              <div className="text-xs text-gray-500 mt-1">
-                                                📺 {formatWatchTime(section.watchTimeSeconds)} watched ({section.watchPercentage}%)
-                                                {section.lastWatchedAt && (
-                                                  <span className="ml-2">• Last: {new Date(section.lastWatchedAt).toLocaleDateString()}</span>
-                                                )}
-                                              </div>
-                                            )}
-                                            {section.isCompleted && section.completedAt && (
-                                              <div className="text-xs text-green-600 mt-1">
-                                                ✅ Completed on {new Date(section.completedAt).toLocaleDateString()}
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          {section.hasVideo && (
-                                            <div className="text-xs text-gray-500">
-                                              {getWatchProgressBadge(section.watchPercentage)}
-                                            </div>
-                                          )}
-                                          {section.isCompleted ? (
-                                            <CheckCircle className="h-5 w-5 text-green-500" />
-                                          ) : (
-                                            <Clock className="h-5 w-5 text-gray-400" />
-                                          )}
-                                        </div>
-                                      </div>
-                                    ))}
+                              {/* Course Information */}
+                              <div className="bg-blue-50 p-4 rounded-lg">
+                                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                                  <BookOpen className="h-4 w-4" />
+                                  Course Information
+                                </h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <Label className="font-medium">Course Title</Label>
+                                    <p className="text-sm">{request.course.title}</p>
+                                  </div>
+                                  <div>
+                                    <Label className="font-medium">Course ID</Label>
+                                    <p className="text-sm">{request.courseId}</p>
+                                  </div>
+                                  <div>
+                                    <Label className="font-medium">Course Price</Label>
+                                    <p className="text-sm font-semibold">${request.course.price}</p>
+                                  </div>
+                                  <div>
+                                    <Label className="font-medium">Payment Status</Label>
+                                    <div className="mt-1">{getStatusBadge(request.status)}</div>
                                   </div>
                                 </div>
                               </div>
-                            )}
-                            
-                            {/* Transaction Proof Section */}
-                            <div className="border rounded-lg p-4">
-                              <h3 className="text-lg font-semibold mb-4 text-purple-600">Transaction Proof</h3>
-                              <div className="mt-2 border rounded-lg p-4 bg-gray-50">
-                                <Image
-                                  src={request.transactionImage}
-                                  alt="Transaction proof"
-                                  width={500}
-                                  height={400}
-                                  className="max-w-full h-auto rounded shadow-md"
-                                />
-                              </div>
-                            </div>
 
-                            {/* Bank Details Section */}
-                            {request.bankDetails && (
-                              <div className="border rounded-lg p-4">
-                                <h3 className="text-lg font-semibold mb-4 text-orange-600">Bank Details</h3>
-                                <p className="font-medium">{request.bankDetails}</p>
-                              </div>
-                            )}
-
-                            {/* Rejection Reason Section */}
-                            {request.status === 'rejected' && request.rejectionReason && (
-                              <div className="border rounded-lg p-4 border-red-200 bg-red-50">
-                                <h3 className="text-lg font-semibold mb-4 text-red-600">Rejection Reason</h3>
-                                <p className="font-medium text-red-700">{request.rejectionReason}</p>
-                              </div>
-                            )}
-
-                            {request.status === "pending" && (
-                              <div className="flex gap-2 pt-4 border-t">
-                                <Button
-                                  onClick={() => handleApprove(request.id, request.courseId, request.studentEmail)}
-                                  disabled={actionLoading}
-                                  className="bg-green-600 hover:bg-green-700"
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                  Approve & Grant Access
-                                </Button>
-                                
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button variant="destructive">
-                                      <XCircle className="h-4 w-4 mr-2" />
-                                      Reject
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>Reject Payment Request</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="space-y-4">
-                                      <div>
-                                        <Label htmlFor="reason">Rejection Reason</Label>
-                                        <Textarea
-                                          id="reason"
-                                          value={rejectionReason}
-                                          onChange={(e) => setRejectionReason(e.target.value)}
-                                          placeholder="Please provide a reason for rejection..."
-                                          rows={3}
+                              {/* Payment Information */}
+                              <div className="bg-green-50 p-4 rounded-lg">
+                                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                                  <CreditCard className="h-4 w-4" />
+                                  Payment Information
+                                </h3>
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label className="font-medium">Bank Details</Label>
+                                    <p className="text-sm whitespace-pre-wrap">{request.bankDetails}</p>
+                                  </div>
+                                  {request.transactionImage && (
+                                    <div>
+                                      <Label className="font-medium">Transaction Proof</Label>
+                                      <div className="mt-2">
+                                        <Image
+                                          src={request.transactionImage}
+                                          alt="Transaction proof"
+                                          width={400}
+                                          height={300}
+                                          className="rounded border shadow-sm"
                                         />
                                       </div>
-                                      <div className="flex gap-2">
-                                        <Button
-                                          onClick={() => handleReject(request.id)}
-                                          disabled={actionLoading}
-                                          variant="destructive"
-                                        >
-                                          Reject Request
-                                        </Button>
+                                    </div>
+                                  )}
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <Label className="font-medium">Request Date</Label>
+                                      <p className="text-sm">{new Date(request.createdAt).toLocaleString()}</p>
+                                    </div>
+                                    <div>
+                                      <Label className="font-medium">Last Updated</Label>
+                                      <p className="text-sm">{new Date(request.updatedAt).toLocaleString()}</p>
+                                    </div>
+                                  </div>
+                                  {request.approvedBy && (
+                                    <div>
+                                      <Label className="font-medium">Approved By</Label>
+                                      <p className="text-sm">{request.approvedBy}</p>
+                                    </div>
+                                  )}
+                                  {request.rejectionReason && (
+                                    <div>
+                                      <Label className="font-medium">Rejection Reason</Label>
+                                      <p className="text-sm text-red-600">{request.rejectionReason}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Student Progress (if available) */}
+                              {request.studentProgress && (
+                                <div className="bg-purple-50 p-4 rounded-lg">
+                                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                                    <TrendingUp className="h-4 w-4" />
+                                    Learning Progress
+                                  </h3>
+                                  <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div>
+                                        <Label className="font-medium">Overall Progress</Label>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Progress value={request.studentProgress.progressPercentage} className="flex-1" />
+                                          <span className="text-sm font-medium">{request.studentProgress.progressPercentage}%</span>
+                                        </div>
+                                        <div className="mt-1">{getProgressBadge(request.studentProgress.progressPercentage)}</div>
+                                      </div>
+                                      <div>
+                                        <Label className="font-medium">Video Watch Progress</Label>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Progress value={request.studentProgress.overallWatchPercentage} className="flex-1" />
+                                          <span className="text-sm font-medium">{request.studentProgress.overallWatchPercentage}%</span>
+                                        </div>
+                                        <div className="mt-1">{getWatchProgressBadge(request.studentProgress.overallWatchPercentage)}</div>
                                       </div>
                                     </div>
-                                  </DialogContent>
-                                </Dialog>
-                              </div>
-                            )}
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+                                    <div className="grid grid-cols-4 gap-4">
+                                      <div>
+                                        <Label className="font-medium">Completed Sections</Label>
+                                        <p className="text-sm">{request.studentProgress.completedSections} / {request.studentProgress.totalSections}</p>
+                                      </div>
+                                      <div>
+                                        <Label className="font-medium">Total Study Time</Label>
+                                        <p className="text-sm">{formatStudyTime(request.studentProgress.totalStudyTime)}</p>
+                                      </div>
+                                      <div>
+                                        <Label className="font-medium">Video Watch Time</Label>
+                                        <p className="text-sm">{formatWatchTime(request.studentProgress.totalWatchTimeMinutes * 60)}</p>
+                                      </div>
+                                      <div>
+                                        <Label className="font-medium">Last Activity</Label>
+                                        <p className="text-sm">
+                                          {request.studentProgress.lastActivity 
+                                            ? new Date(request.studentProgress.lastActivity).toLocaleDateString()
+                                            : 'No activity'
+                                          }
+                                        </p>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Section Progress Details */}
+                                    {request.studentProgress.sectionProgress && request.studentProgress.sectionProgress.length > 0 && (
+                                      <div>
+                                        <Label className="font-medium">Section-wise Progress</Label>
+                                        <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
+                                          {request.studentProgress.sectionProgress.map((section) => (
+                                            <div key={section.sectionId} className="flex items-center justify-between p-2 bg-white rounded border">
+                                              <div className="flex-1">
+                                                <p className="text-sm font-medium">{section.sectionTitle}</p>
+                                                <p className="text-xs text-gray-500">Position: {section.sectionPosition}</p>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                {section.hasVideo && (
+                                                  <div className="text-xs">
+                                                    <PlayCircle className="h-3 w-3 inline mr-1" />
+                                                    {section.watchPercentage}% watched
+                                                  </div>
+                                                )}
+                                                <Badge variant={section.isCompleted ? "default" : "outline"} className="text-xs">
+                                                  {section.isCompleted ? "Completed" : "Pending"}
+                                                </Badge>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                        
+                        {request.status === "pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => handleApprove(request.id, request.courseId, request.studentEmail)}
+                              disabled={actionLoading}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="destructive" size="sm">
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Reject
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Reject Payment Request</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="reason">Rejection Reason</Label>
+                                    <Textarea
+                                      id="reason"
+                                      value={rejectionReason}
+                                      onChange={(e) => setRejectionReason(e.target.value)}
+                                      placeholder="Please provide a reason for rejection..."
+                                    />
+                                  </div>
+                                  <div className="flex justify-end gap-2">
+                                    <Button variant="outline" onClick={() => setRejectionReason("")}>
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      onClick={() => handleReject(request.id)}
+                                      disabled={actionLoading}
+                                    >
+                                      Reject
+                                    </Button>
+                                  </div>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

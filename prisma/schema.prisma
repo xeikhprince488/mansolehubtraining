@@ -160,12 +160,47 @@ model Purchase {
   studentId String?
   student   Student? @relation(fields: [studentId], references: [id])
 
+  // Device-based access control fields
+  deviceFingerprint String? // Unique device identifier
+  deviceInfo Json? // Store device details (browser, OS, screen resolution, etc.)
+  ipAddress String? // IP address when purchased
+  userAgent String? // Browser user agent
+  isDeviceLocked Boolean @default(true) // Whether course is locked to this device
+
+  // Add relation to DeviceAccess
+  deviceAccesses DeviceAccess[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
   @@index([courseId])
   @@index([studentId])
+  @@index([deviceFingerprint])
+  
   @@unique([customerEmail, courseId]) // Changed from customerId_courseId to customerEmail_courseId
+}
+
+model DeviceAccess {
+  id String @id @default(uuid())
+  
+  purchaseId String
+  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  
+  deviceFingerprint String
+  deviceInfo Json
+  ipAddress String?
+  userAgent String
+  
+  lastAccessedAt DateTime @default(now())
+  accessCount Int @default(1)
+  isBlocked Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  
+  @@index([purchaseId])
+  @@index([deviceFingerprint])
+  @@unique([purchaseId, deviceFingerprint])
 }
 
 model ManualPaymentRequest {
@@ -188,6 +223,10 @@ model ManualPaymentRequest {
   status          String   @default("pending") // pending, approved, rejected
   approvedBy      String?  // Instructor who approved
   rejectionReason String?  @db.Text
+  
+  // Device information fields
+  deviceFingerprint String? // Device fingerprint from submission
+  deviceInfo       Json?    // Device details from submission
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @default(now())

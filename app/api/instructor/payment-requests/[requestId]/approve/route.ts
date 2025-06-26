@@ -117,7 +117,8 @@ export const POST = async (
       data: {
         customerEmail: studentEmail, // Changed from customerId to customerEmail
         courseId: courseId,
-        studentId: studentRecord?.id
+        studentId: studentRecord?.id,
+        isDeviceLocked: true,
       }
     });
 

@@ -3,8 +3,11 @@
 import { Course, Section, Purchase } from "@prisma/client";
 import Link from "next/link";
 import { Progress } from "../ui/progress";
-import { Play, CheckCircle, Clock, Target, Home, GraduationCap, FileText } from "lucide-react";
+import { Play, CheckCircle, Clock, Target, Home, GraduationCap, FileText, Lock, PlayCircle, CheckCircle2 } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 interface CourseSideBarClientProps {
   course: Course;
@@ -12,6 +15,7 @@ interface CourseSideBarClientProps {
   completedSections: number;
   purchase: Purchase | null;
   progressPercentage: number;
+  progressMap: Map<string, boolean>;
 }
 
 export const CourseSideBarClient = ({ 
@@ -19,8 +23,33 @@ export const CourseSideBarClient = ({
   publishedSections, 
   completedSections, 
   purchase, 
-  progressPercentage 
+  progressPercentage,
+  progressMap
 }: CourseSideBarClientProps) => {
+  const router = useRouter();
+
+  // Add effect to refresh when progressMap changes
+  useEffect(() => {
+    // This will help ensure the component re-renders when progress updates
+  }, [progressMap]);
+  
+  // Function to check if a section is accessible
+  const isSectionAccessible = (sectionIndex: number, section: Section) => {
+    // First section is always accessible if purchased or free
+    if (sectionIndex === 0) {
+      return purchase || section.isFree;
+    }
+    
+    // For subsequent sections, check if previous section is completed
+    const previousSection = publishedSections[sectionIndex - 1];
+    const isPreviousCompleted = progressMap.get(previousSection.id) || false;
+    
+    // Section is accessible if:
+    // 1. User has purchased the course (or section is free) AND
+    // 2. Previous section is completed
+    return (purchase || section.isFree) && isPreviousCompleted;
+  };
+
   return (
     <div className="hidden md:flex flex-col fixed left-0 top-0 w-80 h-screen bg-white border-r border-gray-200 shadow-lg z-40">
       {/* Header Section */}
@@ -136,66 +165,94 @@ export const CourseSideBarClient = ({
           
           <div className="space-y-2">
             {publishedSections.map((section, index) => {
-              const isCompleted = completedSections > index;
+              const isCompleted = progressMap.get(section.id) || false;
+              const isAccessible = isSectionAccessible(index, section);
+              const isLocked = !isAccessible;
               
               return (
-                <Link
-                  key={section.id}
-                  href={`/courses/${course.id}/sections/${section.id}`}
-                  className="group block"
-                >
-                  <div className="flex items-center space-x-3 px-4 py-4 rounded-xl bg-white border border-gray-200 hover:border-indigo-200 hover:shadow-md transition-all duration-200">
-                    {/* Section Icon */}
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${
-                      isCompleted 
-                        ? 'bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200' 
-                        : section.isFree 
-                          ? 'bg-blue-100 text-blue-600 group-hover:bg-blue-200'
-                          : 'bg-amber-100 text-amber-600 group-hover:bg-amber-200'
-                    }`}>
-                      {isCompleted ? (
-                        <CheckCircle className="h-5 w-5" />
-                      ) : section.isFree ? (
-                        <Play className="h-5 w-5" />
-                      ) : (
-                        <Clock className="h-5 w-5" />
-                      )}
-                    </div>
-                    
-                    {/* Section Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">
-                          {String(index + 1).padStart(2, '0')}
-                        </span>
-                        <h4 className="font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
-                          {section.title}
-                        </h4>
+                <div key={section.id} className="group block">
+                  {isLocked ? (
+                    <div className={`flex items-center space-x-3 px-4 py-4 rounded-xl border transition-all duration-200 bg-gray-100 border-gray-200 opacity-60 cursor-not-allowed`}>
+                      {/* Section Icon */}
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 bg-gray-200 text-gray-400">
+                        <Lock className="h-5 w-5" />
                       </div>
                       
-                      <div className="flex items-center space-x-2">
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          isCompleted 
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : section.isFree 
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-amber-100 text-amber-700'
-                        }`}>
-                          {isCompleted ? 'Completed' : section.isFree ? 'Free' : 'Premium'}
-                        </span>
+                      {/* Section Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+                          <h4 className="font-semibold truncate transition-colors text-gray-500">
+                            {section.title}
+                          </h4>
+                        </div>
                         
-                        {isCompleted && (
-                          <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                        )}
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs px-2 py-1 rounded-full font-medium bg-gray-200 text-gray-500">
+                            Locked
+                          </span>
+                          <span className="text-xs text-gray-500">Complete previous section</span>
+                        </div>
                       </div>
                     </div>
-                    
-                    {/* Arrow Indicator */}
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      <div className="w-2 h-2 border-r-2 border-b-2 border-indigo-400 transform rotate-[-45deg]"></div>
-                    </div>
-                  </div>
-                </Link>
+                  ) : (
+                    <Link href={`/courses/${course.id}/sections/${section.id}`}>
+                      <div className="flex items-center space-x-3 px-4 py-4 rounded-xl border transition-all duration-200 bg-white border-gray-200 hover:border-indigo-200 hover:shadow-md">
+                        {/* Section Icon */}
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                          isCompleted 
+                            ? 'bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200' 
+                            : section.isFree 
+                              ? 'bg-blue-100 text-blue-600 group-hover:bg-blue-200'
+                              : 'bg-amber-100 text-amber-600 group-hover:bg-amber-200'
+                        }`}>
+                          {isCompleted ? (
+                            <CheckCircle className="h-5 w-5" />
+                          ) : section.isFree ? (
+                            <Play className="h-5 w-5" />
+                          ) : (
+                            <Clock className="h-5 w-5" />
+                          )}
+                        </div>
+                        
+                        {/* Section Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">
+                              {String(index + 1).padStart(2, '0')}
+                            </span>
+                            <h4 className="font-semibold truncate transition-colors text-gray-900 group-hover:text-indigo-600">
+                              {section.title}
+                            </h4>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                              isCompleted 
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : section.isFree 
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              {isCompleted ? 'Completed' : section.isFree ? 'Free' : 'Premium'}
+                            </span>
+                            
+                            {isCompleted && (
+                              <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Arrow Indicator */}
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <div className="w-2 h-2 border-r-2 border-b-2 border-indigo-400 transform rotate-[-45deg]"></div>
+                        </div>
+                      </div>
+                    </Link>
+                  )}
+                </div>
               );
             })}
           </div>

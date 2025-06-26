@@ -1,8 +1,9 @@
-import SectionsDetails from "@/components/sections/SectionsDetails";
 import { db } from "@/lib/db";
 import { Resource } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth, currentUser } from "@clerk/nextjs/server";
+import DeviceAccessWrapper from "@/components/custom/DeviceAccessWrapper";
+import SectionsDetails from "@/components/sections/SectionsDetails";
 
 const SectionDetailsPage = async ({
   params,
@@ -17,11 +18,6 @@ const SectionDetailsPage = async ({
   }
 
   const customerEmail = user.emailAddresses[0].emailAddress;
-
-  console.log("Current user ID:", userId);
-  console.log("Customer email:", customerEmail);
-  console.log("Course ID:", params.courseId);
-
   const { courseId, sectionId } = params;
 
   const course = await db.course.findUnique({
@@ -63,26 +59,53 @@ const SectionDetailsPage = async ({
     },
   });
 
-  console.log("Found purchase:", purchase);
-
-  let muxData = null;
-  let resources: Resource[] = [];
-
-  if (section.isFree || purchase) {
-    muxData = await db.muxData.findUnique({
+  // For free sections, no device restriction
+  if (section.isFree) {
+    const muxData = await db.muxData.findUnique({
       where: {
         sectionId,
       },
     });
-  }
 
-  if (purchase) {
-    resources = await db.resource.findMany({
+    const progress = await db.progress.findUnique({
+      where: {
+        studentId_sectionId: {
+          studentId: userId,
+          sectionId,
+        },
+      },
+    });
+
+    const resources = await db.resource.findMany({
       where: {
         sectionId,
       },
     });
+
+    return (
+      <SectionsDetails
+        course={course}
+        section={section}
+        purchase={purchase}
+        muxData={muxData}
+        resources={resources}
+        progress={progress}
+      />
+    );
   }
+
+  // For paid sections, get additional data and use device access guard
+  const muxData = purchase ? await db.muxData.findUnique({
+    where: {
+      sectionId,
+    },
+  }) : null;
+
+  const resources = purchase ? await db.resource.findMany({
+    where: {
+      sectionId,
+    },
+  }) : [];
 
   const progress = await db.progress.findUnique({
     where: {
@@ -94,13 +117,14 @@ const SectionDetailsPage = async ({
   });
 
   return (
-    <SectionsDetails
+    <DeviceAccessWrapper
+      courseId={courseId}
+      courseName={course.title}
+      purchase={purchase}
       course={course}
       section={section}
-      purchase={purchase}
-      muxData={muxData}
-      resources={resources}
-      progress={progress}
+      userId={userId}
+      sectionId={sectionId}
     />
   );
 };

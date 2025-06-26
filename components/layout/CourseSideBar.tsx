@@ -41,15 +41,26 @@ const CourseSideBar = async ({ course, studentId }: CourseSideBarProps) => {
 
   const publishedSectionIds = publishedSections.map((section) => section.id);
 
-  const completedSections = await db.progress.count({
+  // Get individual progress for each section
+  const sectionProgress = await db.progress.findMany({
     where: {
       studentId,
       sectionId: {
         in: publishedSectionIds,
       },
+    },
+    select: {
+      sectionId: true,
       isCompleted: true,
-    }
+    },
   });
+
+  // Create a map of section completion status
+  const progressMap = new Map(
+    sectionProgress.map((progress) => [progress.sectionId, progress.isCompleted])
+  );
+
+  const completedSections = sectionProgress.filter((progress) => progress.isCompleted).length;
 
   const progressPercentage = publishedSectionIds.length > 0 
     ? (completedSections / publishedSectionIds.length) * 100 
@@ -62,6 +73,7 @@ const CourseSideBar = async ({ course, studentId }: CourseSideBarProps) => {
       completedSections={completedSections}
       purchase={purchase}
       progressPercentage={progressPercentage}
+      progressMap={progressMap}
     />
   );
 };

@@ -24,7 +24,11 @@ const VideoPlayer = ({
   const playerRef = useRef<any>(null);
   const [duration, setDuration] = useState(0);
   const [lastUpdateTime, setLastUpdateTime] = useState(0);
+  const [maxWatchedTime, setMaxWatchedTime] = useState(0); // Track furthest point watched
   const progressUpdateInterval = useRef<NodeJS.Timeout | null>(null);
+  const [isSeekingBlocked, setIsSeekingBlocked] = useState(false);
+  const alertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [canShowAlert, setCanShowAlert] = useState(true);
 
   // Update progress every 10 seconds while watching
   const updateProgress = async (currentTime: number, videoDuration: number, isCompleted: boolean = false) => {
@@ -58,9 +62,14 @@ const VideoPlayer = ({
   };
 
   const handleTimeUpdate = () => {
-    if (playerRef.current) {
+    if (playerRef.current && !isSeekingBlocked) {
       const currentTime = playerRef.current.currentTime;
       const videoDuration = playerRef.current.duration || duration;
+      
+      // Update max watched time only if user progresses forward naturally (not seeking)
+      if (currentTime > maxWatchedTime) {
+        setMaxWatchedTime(currentTime);
+      }
       
       // Update progress every 10 seconds
       if (currentTime - lastUpdateTime >= 10) {
@@ -70,10 +79,58 @@ const VideoPlayer = ({
     }
   };
 
+  // Handle seeking attempts - COMPLETELY STRICT with controlled alerts
+  const handleSeeking = () => {
+    if (playerRef.current) {
+      const currentTime = playerRef.current.currentTime;
+      
+      // STRICT RULE: No forward seeking allowed AT ALL
+      if (currentTime > maxWatchedTime) {
+        setIsSeekingBlocked(true);
+        playerRef.current.currentTime = maxWatchedTime;
+        
+        // Show alert only once per seek attempt
+        if (canShowAlert) {
+          alert('Forward seeking is strictly prohibited! You can only rewind to previously watched content.');
+          setCanShowAlert(false);
+          
+          // Reset alert availability after 5 seconds to prevent spam
+          if (alertTimeoutRef.current) {
+            clearTimeout(alertTimeoutRef.current);
+          }
+          alertTimeoutRef.current = setTimeout(() => {
+            setCanShowAlert(true);
+          }, 5000); // Increased from 1 second to 5 seconds
+        }
+        
+        setTimeout(() => {
+          setIsSeekingBlocked(false);
+        }, 100);
+      }
+    }
+  };
+
+  // Additional event to catch seek attempts - NO ALERT HERE
+  const handleSeeked = () => {
+    if (playerRef.current) {
+      const currentTime = playerRef.current.currentTime;
+      
+      // Double-check after seeking is complete - ONLY RESET POSITION, NO ALERT
+      if (currentTime > maxWatchedTime) {
+        setIsSeekingBlocked(true);
+        playerRef.current.currentTime = maxWatchedTime;
+        setTimeout(() => {
+          setIsSeekingBlocked(false);
+        }, 100);
+      }
+    }
+  };
+
   const handleEnded = () => {
     if (playerRef.current) {
       const videoDuration = playerRef.current.duration || duration;
       updateProgress(videoDuration, videoDuration, true);
+      setMaxWatchedTime(videoDuration); // Mark entire video as watched
     }
   };
 
@@ -107,13 +164,32 @@ const VideoPlayer = ({
     }
   };
 
+  // Load user's previous progress on component mount
   useEffect(() => {
+    const loadProgress = async () => {
+      if (!userId) return;
+      
+      try {
+        const response = await axios.get(`/api/courses/${courseId}/sections/${sectionId}/progress`);
+        if (response.data && response.data.lastWatchedPosition) {
+          setMaxWatchedTime(response.data.lastWatchedPosition);
+        }
+      } catch (error) {
+        console.error('Failed to load progress:', error);
+      }
+    };
+
+    loadProgress();
+
     return () => {
       if (progressUpdateInterval.current) {
         clearInterval(progressUpdateInterval.current);
       }
+      if (alertTimeoutRef.current) {
+        clearTimeout(alertTimeoutRef.current);
+      }
     };
-  }, []);
+  }, [userId, courseId, sectionId]);
 
   return (
     <MuxPlayer
@@ -122,6 +198,8 @@ const VideoPlayer = ({
       className={className}
       onLoadedMetadata={handleLoadedMetadata}
       onTimeUpdate={handleTimeUpdate}
+      onSeeking={handleSeeking}
+      onSeeked={handleSeeked}
       onEnded={handleEnded}
       onPlay={handlePlay}
       onPause={handlePause}

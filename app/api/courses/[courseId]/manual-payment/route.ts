@@ -1,12 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
+import { getServerDeviceInfo } from "@/lib/deviceFingerprint";
 
 export const POST = async (
   req: NextRequest,
   { params }: { params: { courseId: string } }
 ) => {
   try {
-    const body = await req.json(); // Changed from formData to JSON
+    const body = await req.json();
     const {
       studentEmail,
       studentName,
@@ -21,12 +22,17 @@ export const POST = async (
       occupation,
       courseId,
       bankDetails,
-      transactionImage // Now expecting URL string
+      transactionImage,
+      deviceFingerprint,
+      deviceInfo
     } = body;
 
     if (!studentEmail || !studentName || !phoneNumber || !courseId || !transactionImage) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
+
+    // Get server-side device info
+    const serverDeviceInfo = getServerDeviceInfo(req);
 
     // Check if course exists
     const course = await db.course.findUnique({
@@ -50,7 +56,7 @@ export const POST = async (
       return new NextResponse("Payment request already exists", { status: 400 });
     }
 
-    // Create payment request with all fields
+    // Create payment request with all fields including device info
     const paymentRequest = await db.manualPaymentRequest.create({
       data: {
         studentEmail,
@@ -65,9 +71,11 @@ export const POST = async (
         qualification: qualification || null,
         occupation: occupation || null,
         courseId,
-        transactionImage, // Now storing the UploadThing URL directly
+        transactionImage,
         bankDetails,
-        status: "pending"
+        status: "pending",
+        deviceFingerprint: deviceFingerprint || null,
+        deviceInfo: deviceInfo ? JSON.parse(deviceInfo) : null
       }
     });
 

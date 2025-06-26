@@ -13,6 +13,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { Course } from "@prisma/client";
 import FileUpload from "../custom/FileUpload";
+import { generateDeviceFingerprint } from "@/lib/deviceFingerprint";
 
 interface ManualPaymentFormProps {
   course: Course;
@@ -70,11 +71,16 @@ const ManualPaymentForm = ({ course, onClose, onSubmitted }: ManualPaymentFormPr
     setIsLoading(true);
     
     try {
-      // Send as JSON instead of FormData since we now have URL
+      // Generate device fingerprint and info
+      const { fingerprint, deviceInfo } = await generateDeviceFingerprint();
+      
+      // Send as JSON with device information
       const dataToSend = {
         ...formData,
         courseId: course.id,
-        bankDetails: JSON.stringify(bankDetails)
+        bankDetails: JSON.stringify(bankDetails),
+        deviceFingerprint: fingerprint,
+        deviceInfo: JSON.stringify(deviceInfo)
       };
 
       await axios.post(`/api/courses/${course.id}/manual-payment`, dataToSend, {

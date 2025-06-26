@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import PaymentRequestsManager from "@/components/instructor/PaymentRequestsManager";
+import PaymentSearchBar from "@/components/instructor/PaymentSearchBar";
 import { CreditCard, TrendingUp, Clock, CheckCircle } from "lucide-react";
 import { db } from "@/lib/db";
 
@@ -47,6 +48,17 @@ const PaymentsPage = async () => {
         instructorId: userId
       },
       status: "rejected"
+    }
+  });
+
+  // Get instructor's courses for filter dropdown
+  const courses = await db.course.findMany({
+    where: {
+      instructorId: userId
+    },
+    select: {
+      id: true,
+      title: true
     }
   });
 
@@ -107,9 +119,7 @@ const PaymentsPage = async () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-          <div className="p-6">
-            <PaymentRequestsManager />
-          </div>
+          <PaymentRequestsManager courses={courses} />
         </div>
       </div>
     </div>
