@@ -220,9 +220,16 @@ const SectionsDetails = ({
                       <h2 className="text-xl font-semibold text-gray-800">Video Lesson</h2>
                     </div>
                     <div className="rounded-xl overflow-hidden shadow-lg">
+                    
                       <VideoPlayer
                         playbackId={muxData?.playbackId || ""}
                         className="w-full max-w-4xl"
+                        courseId={course.id}
+                        sectionId={section.id}
+                        onProgressUpdate={(progressData) => {
+                        // Optionally handle real-time progress updates in the UI
+                        console.log('Progress updated:', progressData);
+                        }}
                       />
                     </div>
                   </div>

@@ -25,6 +25,16 @@ const FileUpload = ({ value, onChange, endpoint, page }: FileUploadProps) => {
         />
       )}
 
+      {page === "Manual Payment" && value !== "" && (
+        <Image
+          src={value}
+          alt="Transaction proof"
+          width={500}
+          height={500}
+          className="w-[280px] h-[200px] object-cover rounded-xl"
+        />
+      )}
+
       {page === "Edit Section" && value !== "" && (
         <p className="text-sm font-medium">{value}</p>
       )}

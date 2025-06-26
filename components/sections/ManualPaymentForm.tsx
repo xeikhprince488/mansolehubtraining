@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import axios from "axios";
 import toast from "react-hot-toast";
 import { Course } from "@prisma/client";
+import FileUpload from "../custom/FileUpload";
 
 interface ManualPaymentFormProps {
   course: Course;
@@ -19,8 +20,23 @@ interface ManualPaymentFormProps {
   onSubmitted?: () => void;
 }
 
+interface FormData {
+  studentEmail: string;
+  studentName: string;
+  fatherName: string;
+  phoneNumber: string;
+  whatsappNumber: string;
+  cnicNumber: string;
+  dateOfBirth: string;
+  address: string;
+  city: string;
+  qualification: string;
+  occupation: string;
+  transactionImage: string; // Changed from File | null to string
+}
+
 const ManualPaymentForm = ({ course, onClose, onSubmitted }: ManualPaymentFormProps) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     studentEmail: "",
     studentName: "",
     fatherName: "",
@@ -32,7 +48,7 @@ const ManualPaymentForm = ({ course, onClose, onSubmitted }: ManualPaymentFormPr
     city: "",
     qualification: "",
     occupation: "",
-    transactionImage: null as File | null,
+    transactionImage: "", // Changed from null to empty string
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -54,20 +70,16 @@ const ManualPaymentForm = ({ course, onClose, onSubmitted }: ManualPaymentFormPr
     setIsLoading(true);
     
     try {
-      const formDataToSend = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (key === 'transactionImage' && value) {
-          formDataToSend.append(key, value);
-        } else if (key !== 'transactionImage') {
-          formDataToSend.append(key, value as string);
-        }
-      });
-      formDataToSend.append("courseId", course.id);
-      formDataToSend.append("bankDetails", JSON.stringify(bankDetails));
+      // Send as JSON instead of FormData since we now have URL
+      const dataToSend = {
+        ...formData,
+        courseId: course.id,
+        bankDetails: JSON.stringify(bankDetails)
+      };
 
-      await axios.post(`/api/courses/${course.id}/manual-payment`, formDataToSend, {
+      await axios.post(`/api/courses/${course.id}/manual-payment`, dataToSend, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          "Content-Type": "application/json",
         },
       });
 
@@ -80,17 +92,6 @@ const ManualPaymentForm = ({ course, onClose, onSubmitted }: ManualPaymentFormPr
       toast.error("Failed to submit payment request");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast.error("Image size should be less than 5MB");
-        return;
-      }
-      setFormData(prev => ({ ...prev, transactionImage: file }));
     }
   };
 
@@ -311,16 +312,15 @@ const ManualPaymentForm = ({ course, onClose, onSubmitted }: ManualPaymentFormPr
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="transaction" className="flex items-center gap-2">
+            <Label className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
               Transaction Proof *
             </Label>
-            <Input
-              id="transaction"
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              required
+            <FileUpload
+              value={formData.transactionImage}
+              onChange={(url) => setFormData(prev => ({ ...prev, transactionImage: url || "" }))}
+              endpoint="transactionImage"
+              page="Manual Payment"
             />
             <p className="text-xs text-gray-500">
               Upload a screenshot or photo of your bank transfer receipt (Max 5MB)

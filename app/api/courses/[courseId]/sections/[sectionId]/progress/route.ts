@@ -8,7 +8,14 @@ export const POST = async (
 ) => {
   try {
     const { userId } = await auth();
-    const { isCompleted } = await req.json();
+    const { 
+      isCompleted, 
+      watchTimeSeconds, 
+      videoDurationSeconds, 
+      watchPercentage, 
+      lastWatchedPosition,
+      lastWatchedAt 
+    } = await req.json();
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -46,6 +53,30 @@ export const POST = async (
       },
     });
 
+    const updateData: any = {
+      isCompleted: isCompleted || false,
+    };
+
+    // Add video tracking data if provided
+    if (watchTimeSeconds !== undefined) {
+      updateData.watchTimeSeconds = Math.max(watchTimeSeconds, progress?.watchTimeSeconds || 0);
+    }
+    if (videoDurationSeconds !== undefined) {
+      updateData.videoDurationSeconds = videoDurationSeconds;
+    }
+    if (watchPercentage !== undefined) {
+      updateData.watchPercentage = Math.max(watchPercentage, progress?.watchPercentage || 0);
+    }
+    if (lastWatchedPosition !== undefined) {
+      updateData.lastWatchedPosition = lastWatchedPosition;
+    }
+    if (lastWatchedAt) {
+      updateData.lastWatchedAt = new Date(lastWatchedAt);
+    }
+    if (isCompleted && !progress?.completedAt) {
+      updateData.completedAt = new Date();
+    }
+
     if (progress) {
       progress = await db.progress.update({
         where: {
@@ -54,16 +85,14 @@ export const POST = async (
             sectionId,
           },
         },
-        data: {
-          isCompleted,
-        },
+        data: updateData,
       });
     } else {
       progress = await db.progress.create({
         data: {
           studentId: userId,
           sectionId,
-          isCompleted,
+          ...updateData,
         },
       });
     }

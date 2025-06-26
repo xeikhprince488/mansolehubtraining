@@ -133,6 +133,14 @@ model Progress {
   section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
 
   isCompleted Boolean @default(false)
+  
+  // New fields for video progress tracking
+  watchTimeSeconds Int @default(0)  // Total time watched in seconds
+  videoDurationSeconds Int @default(0)  // Total video duration
+  watchPercentage Float @default(0)  // Percentage of video watched
+  lastWatchedPosition Int @default(0)  // Last position in seconds
+  completedAt DateTime?  // When marked as completed
+  lastWatchedAt DateTime?  // Last time video was watched
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())

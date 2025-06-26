@@ -21,6 +21,9 @@ export const ourFileRouter = {
   sectionResource: f(["text", "image", "video", "audio", "pdf"])
   .middleware(handleAuth)
   .onUploadComplete(() => {}),
+  transactionImage: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
+  .middleware(handleAuth)
+  .onUploadComplete(() => {}),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;

@@ -6,12 +6,35 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CheckCircle, XCircle, Eye, Clock, Mail, User, CreditCard } from "lucide-react";
+import { CheckCircle, XCircle, Eye, Clock, Mail, User, CreditCard, PlayCircle, BookOpen, TrendingUp } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import axios from "axios";
 import toast from "react-hot-toast";
 import Image from "next/image";
+
+interface StudentProgress {
+  totalSections: number;
+  completedSections: number;
+  progressPercentage: number;
+  lastActivity: string | null;
+  totalStudyTime: number;
+  totalWatchTimeMinutes: number;
+  totalVideoDurationMinutes: number;
+  overallWatchPercentage: number;
+  sectionProgress: {
+    sectionId: string;
+    sectionTitle: string;
+    sectionPosition: number;
+    isCompleted: boolean;
+    completedAt: string;
+    hasVideo: boolean;
+    watchTimeSeconds: number;
+    watchPercentage: number;
+    lastWatchedAt: string | null;
+  }[];
+}
 
 interface PaymentRequest {
     id: string;
@@ -38,7 +61,9 @@ interface PaymentRequest {
     rejectionReason?: string;
     createdAt: string;
     updatedAt: string;
+    studentProgress?: StudentProgress;
   }
+
 const PaymentRequestsManager = () => {
   const [requests, setRequests] = useState<PaymentRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -115,6 +140,40 @@ const PaymentRequestsManager = () => {
     }
   };
 
+  const formatStudyTime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  };
+
+  const getProgressBadge = (percentage: number) => {
+    if (percentage === 0) return <Badge variant="outline" className="text-gray-600 border-gray-600">Not Started</Badge>;
+    if (percentage < 25) return <Badge variant="outline" className="text-red-600 border-red-600">Just Started</Badge>;
+    if (percentage < 50) return <Badge variant="outline" className="text-orange-600 border-orange-600">In Progress</Badge>;
+    if (percentage < 75) return <Badge variant="outline" className="text-blue-600 border-blue-600">Good Progress</Badge>;
+    if (percentage < 100) return <Badge variant="outline" className="text-purple-600 border-purple-600">Almost Done</Badge>;
+    return <Badge variant="outline" className="text-green-600 border-green-600">Completed</Badge>;
+  };
+
+  // Add these helper functions
+  const formatWatchTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
+  const getWatchProgressBadge = (percentage: number) => {
+    if (percentage === 0) return <Badge variant="outline" className="text-gray-600 border-gray-600">Not Watched</Badge>;
+    if (percentage < 25) return <Badge variant="outline" className="text-red-600 border-red-600">{percentage}% Watched</Badge>;
+    if (percentage < 50) return <Badge variant="outline" className="text-orange-600 border-orange-600">{percentage}% Watched</Badge>;
+    if (percentage < 75) return <Badge variant="outline" className="text-blue-600 border-blue-600">{percentage}% Watched</Badge>;
+    if (percentage < 100) return <Badge variant="outline" className="text-purple-600 border-purple-600">{percentage}% Watched</Badge>;
+    return <Badge variant="outline" className="text-green-600 border-green-600">Fully Watched</Badge>;
+  };
+
   if (isLoading) {
     return <div className="flex justify-center p-8">Loading payment requests...</div>;
   }
@@ -142,6 +201,7 @@ const PaymentRequestsManager = () => {
                 <TableHead>Student</TableHead>
                 <TableHead>Course</TableHead>
                 <TableHead>Amount</TableHead>
+                <TableHead>Progress</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Actions</TableHead>
@@ -164,6 +224,24 @@ const PaymentRequestsManager = () => {
                   </TableCell>
                   <TableCell>{request.course.title}</TableCell>
                   <TableCell>${request.course.price}</TableCell>
+                  <TableCell>
+                    {request.studentProgress ? (
+                      <div className="space-y-2">
+                        {getProgressBadge(request.studentProgress.progressPercentage)}
+                        <div className="text-xs text-gray-500">
+                          {request.studentProgress.completedSections}/{request.studentProgress.totalSections} sections
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          📺 {formatWatchTime(request.studentProgress.totalWatchTimeMinutes * 60)} watched
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          🎯 {request.studentProgress.overallWatchPercentage}% video completion
+                        </div>
+                      </div>
+                    ) : (
+                      <Badge variant="outline" className="text-gray-600 border-gray-600">No Access</Badge>
+                    )}
+                  </TableCell>
                   <TableCell>{getStatusBadge(request.status)}</TableCell>
                   <TableCell>{new Date(request.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell>
@@ -174,7 +252,7 @@ const PaymentRequestsManager = () => {
                             <Eye className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle>Payment Request Details</DialogTitle>
                           </DialogHeader>
@@ -252,6 +330,116 @@ const PaymentRequestsManager = () => {
                                 </div>
                               </div>
                             </div>
+                            
+                            {/* Student Progress Section */}
+                            {request.studentProgress && (
+                              <div className="border rounded-lg p-4">
+                                <h3 className="text-lg font-semibold mb-4 text-indigo-600 flex items-center gap-2">
+                                  <TrendingUp className="h-5 w-5" />
+                                  Learning Progress
+                                </h3>
+                                
+                                {/* Progress Overview */}
+                                <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+                                  <div className="bg-blue-50 p-4 rounded-lg">
+                                    <div className="text-2xl font-bold text-blue-600">
+                                      {request.studentProgress.progressPercentage}%
+                                    </div>
+                                    <div className="text-sm text-blue-700">Overall Progress</div>
+                                    <Progress value={request.studentProgress.progressPercentage} className="mt-2" />
+                                  </div>
+                                  
+                                  <div className="bg-green-50 p-4 rounded-lg">
+                                    <div className="text-2xl font-bold text-green-600">
+                                      {request.studentProgress.completedSections}
+                                    </div>
+                                    <div className="text-sm text-green-700">
+                                      of {request.studentProgress.totalSections} Sections
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="bg-purple-50 p-4 rounded-lg">
+                                    <div className="text-2xl font-bold text-purple-600">
+                                      {formatStudyTime(request.studentProgress.totalStudyTime)}
+                                    </div>
+                                    <div className="text-sm text-purple-700">Study Time</div>
+                                  </div>
+                                  
+                                  <div className="bg-indigo-50 p-4 rounded-lg">
+                                    <div className="text-2xl font-bold text-indigo-600">
+                                      {request.studentProgress.overallWatchPercentage}%
+                                    </div>
+                                    <div className="text-sm text-indigo-700">Video Completion</div>
+                                  </div>
+                                  
+                                  <div className="bg-cyan-50 p-4 rounded-lg">
+                                    <div className="text-2xl font-bold text-cyan-600">
+                                      {formatWatchTime(request.studentProgress.totalWatchTimeMinutes * 60)}
+                                    </div>
+                                    <div className="text-sm text-cyan-700">
+                                      of {formatWatchTime(request.studentProgress.totalVideoDurationMinutes * 60)} total
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="bg-orange-50 p-4 rounded-lg">
+                                    <div className="text-sm font-bold text-orange-600">
+                                      {request.studentProgress.lastActivity 
+                                        ? new Date(request.studentProgress.lastActivity).toLocaleDateString()
+                                        : 'No Activity'
+                                      }
+                                    </div>
+                                    <div className="text-sm text-orange-700">Last Activity</div>
+                                  </div>
+                                </div>
+
+                                {/* Section Progress Details */}
+                                <div className="space-y-3">
+                                  <h4 className="font-semibold text-gray-800">Section Progress Details</h4>
+                                  <div className="max-h-60 overflow-y-auto">
+                                    {request.studentProgress.sectionProgress.map((section, index) => (
+                                      <div key={section.sectionId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2">
+                                        <div className="flex items-center gap-3">
+                                          <div className="flex items-center gap-2">
+                                            {section.hasVideo && <PlayCircle className="h-4 w-4 text-blue-500" />}
+                                            <BookOpen className="h-4 w-4 text-gray-500" />
+                                          </div>
+                                          <div className="flex-1">
+                                            <div className="font-medium text-sm">
+                                              {section.sectionPosition}. {section.sectionTitle}
+                                            </div>
+                                            {section.hasVideo && (
+                                              <div className="text-xs text-gray-500 mt-1">
+                                                📺 {formatWatchTime(section.watchTimeSeconds)} watched ({section.watchPercentage}%)
+                                                {section.lastWatchedAt && (
+                                                  <span className="ml-2">• Last: {new Date(section.lastWatchedAt).toLocaleDateString()}</span>
+                                                )}
+                                              </div>
+                                            )}
+                                            {section.isCompleted && section.completedAt && (
+                                              <div className="text-xs text-green-600 mt-1">
+                                                ✅ Completed on {new Date(section.completedAt).toLocaleDateString()}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          {section.hasVideo && (
+                                            <div className="text-xs text-gray-500">
+                                              {getWatchProgressBadge(section.watchPercentage)}
+                                            </div>
+                                          )}
+                                          {section.isCompleted ? (
+                                            <CheckCircle className="h-5 w-5 text-green-500" />
+                                          ) : (
+                                            <Clock className="h-5 w-5 text-gray-400" />
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                             
                             {/* Transaction Proof Section */}
                             <div className="border rounded-lg p-4">
