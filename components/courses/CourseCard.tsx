@@ -58,7 +58,7 @@ const CourseCard = async ({ course }: { course: Course }) => {
         {/* Price Badge */}
         <div className="absolute bottom-4 right-4">
           <div className="bg-slate-900/90 backdrop-blur-sm text-white px-4 py-2 rounded-2xl shadow-lg border border-white/10">
-            <span className="text-lg font-bold">${course.price}</span>
+            <span className="text-lg font-bold">PKR {course.price}</span>
           </div>
         </div>
       </div>

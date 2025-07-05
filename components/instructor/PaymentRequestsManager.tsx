@@ -275,7 +275,7 @@ const PaymentRequestsManager = ({ courses }: PaymentRequestsManagerProps) => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="font-semibold">${request.course.price}</span>
+                      <span className="font-semibold">PKR {request.course.price}</span>
                     </TableCell>
                     <TableCell>
                       {request.studentProgress ? (
@@ -404,7 +404,7 @@ const PaymentRequestsManager = ({ courses }: PaymentRequestsManagerProps) => {
                                   </div>
                                   <div>
                                     <Label className="font-medium">Course Price</Label>
-                                    <p className="text-sm font-semibold">${request.course.price}</p>
+                                    <p className="text-sm font-semibold">PKR {request.course.price}</p>
                                   </div>
                                   <div>
                                     <Label className="font-medium">Payment Status</Label>

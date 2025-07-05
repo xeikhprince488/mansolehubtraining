@@ -12,8 +12,7 @@ const instructorEmails = [
    'programmingworld488@gmail.com',
   'ceo@largifysolutions.com',
   'mansol.skp@gmail.com',
-  'umarpia4@gmail.com',
-   'nesticktech@gmail.com'
+  'umarpia4@gmail.com'
 ];
 
 export default async function Home() {

@@ -155,7 +155,7 @@ const LearningPage = async () => {
                 <div className="text-2xl font-bold text-purple-700 mb-1">
                   {Math.floor(totalCourses * 0.3)}
                 </div>
-                <div className="text-purple-600">Certificates Earned</div>
+                {/* <div className="text-purple-600">Certificates Earned</div> */}
               </div>
             </div>
           </div>
