@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerDeviceInfo } from "@/lib/deviceFingerprint";
+// Remove the email import since we're using client-side EmailJS now
 
 export const POST = async (
   req: NextRequest,
@@ -24,7 +25,8 @@ export const POST = async (
       bankDetails,
       transactionImage,
       deviceFingerprint,
-      deviceInfo
+      deviceInfo,
+      notes
     } = body;
 
     if (!studentEmail || !studentName || !phoneNumber || !courseId || !transactionImage) {
@@ -56,7 +58,7 @@ export const POST = async (
       return new NextResponse("Payment request already exists", { status: 400 });
     }
 
-    // Create payment request with all fields including device info
+    // Create payment request with all fields including notes
     const paymentRequest = await db.manualPaymentRequest.create({
       data: {
         studentEmail,
@@ -75,9 +77,13 @@ export const POST = async (
         bankDetails,
         status: "pending",
         deviceFingerprint: deviceFingerprint || null,
-        deviceInfo: deviceInfo ? JSON.parse(deviceInfo) : null
+        deviceInfo: deviceInfo ? JSON.parse(deviceInfo) : null,
+        notes: notes || null
       }
     });
+
+    // Email sending is now handled on the client-side using EmailJS
+    console.log('Payment request created successfully, email will be sent from client-side');
 
     return NextResponse.json({ 
       message: "Payment request submitted successfully",

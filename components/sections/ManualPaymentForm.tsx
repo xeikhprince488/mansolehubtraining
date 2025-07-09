@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 import { Course } from "@prisma/client";
 import FileUpload from "../custom/FileUpload";
 import { generateDeviceFingerprint } from "@/lib/deviceFingerprint";
+import { sendPaymentConfirmationEmail } from "@/lib/email-client";
 
 interface ManualPaymentFormProps {
   course: Course;
@@ -34,6 +35,7 @@ interface FormData {
   qualification: string;
   occupation: string;
   transactionImage: string;
+  notes: string; // Add this new field
 }
 
 interface ValidationErrors {
@@ -54,6 +56,7 @@ const ManualPaymentForm = ({ course, onClose, onSubmitted }: ManualPaymentFormPr
     qualification: "",
     occupation: "",
     transactionImage: "",
+    notes: "", // Add this new field
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -170,11 +173,31 @@ const ManualPaymentForm = ({ course, onClose, onSubmitted }: ManualPaymentFormPr
         deviceInfo: JSON.stringify(deviceInfo)
       };
 
-      await axios.post(`/api/courses/${course.id}/manual-payment`, dataToSend, {
+      // Submit to API
+      const response = await axios.post(`/api/courses/${course.id}/manual-payment`, dataToSend, {
         headers: {
           "Content-Type": "application/json",
         },
       });
+
+      // Get the request ID from the response
+      const requestId = response.data.requestId || `req-${Date.now()}`;
+
+      // Send email using client-side EmailJS
+      const emailResult = await sendPaymentConfirmationEmail({
+        ...formData,
+        courseName: course.title,
+        coursePrice: course.price!,
+        requestId: requestId
+      });
+
+      if (emailResult.success) {
+        console.log('Confirmation email sent successfully');
+      } else {
+        console.error('Failed to send confirmation email:', emailResult.error);
+        // Don't fail the entire process if email fails
+        toast.error('Payment submitted but email notification failed');
+      }
 
       setIsSubmitted(true);
       toast.success("Payment request submitted successfully!");
@@ -233,7 +256,7 @@ const ManualPaymentForm = ({ course, onClose, onSubmitted }: ManualPaymentFormPr
               </div>
               <p className="text-sm"><span className="font-medium text-gray-700">Account Title:</span> <span className="text-blue-800">{bankDetails.accountTitle}</span></p>
               <p className="text-lg font-bold text-green-700 bg-green-50 p-3 rounded-lg border border-green-200 mt-4">
-                <span className="text-gray-700">Amount to Transfer:</span> ${course.price}
+                <span className="text-gray-700">Amount to Transfer:</span> PKR {course.price}
               </p>
             </div>
           </AlertDescription>
@@ -421,6 +444,25 @@ const ManualPaymentForm = ({ course, onClose, onSubmitted }: ManualPaymentFormPr
                 rows={3}
                 className="focus:border-blue-500 transition-all duration-200 resize-none"
               />
+            </div>
+
+            {/* Add Notes Section */}
+            <div className="space-y-2 mt-6">
+              <Label htmlFor="notes" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <User className="h-4 w-4 text-blue-600" />
+                Personal Notes
+              </Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                placeholder="Add any additional notes about yourself, your background, or why you're interested in this course..."
+                rows={4}
+                className="focus:border-blue-500 transition-all duration-200 resize-none"
+              />
+              <p className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg border">
+                💡 Optional: Share any relevant information about yourself that might help us serve you better
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">

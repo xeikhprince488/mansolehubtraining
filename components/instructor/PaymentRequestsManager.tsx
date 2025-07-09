@@ -57,6 +57,7 @@ interface PaymentRequest {
     };
     transactionImage: string;
     bankDetails: string;
+    notes?: string; // Add this new field
     status: string;
     approvedBy?: string;
     rejectionReason?: string;
@@ -114,7 +115,8 @@ const PaymentRequestsManager = ({ courses }: PaymentRequestsManagerProps) => {
         request.course?.title?.toLowerCase().includes(searchLower) ||
         request.phoneNumber?.toLowerCase().includes(searchLower) ||
         request.city?.toLowerCase().includes(searchLower) ||
-        request.cnicNumber?.toLowerCase().includes(searchLower)
+        request.cnicNumber?.toLowerCase().includes(searchLower) ||
+        request.notes?.toLowerCase().includes(searchLower) // Add notes to search
       );
     }
 
@@ -384,6 +386,12 @@ const PaymentRequestsManager = ({ courses }: PaymentRequestsManagerProps) => {
                                       <p className="text-sm">{request.occupation}</p>
                                     </div>
                                   )}
+                                   {request.notes && (
+                                    <div>
+                                      <Label className="font-medium">Notes</Label>
+                                      <p className="text-sm ">{request.notes}</p>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
 
@@ -424,6 +432,7 @@ const PaymentRequestsManager = ({ courses }: PaymentRequestsManagerProps) => {
                                     <Label className="font-medium">Bank Details</Label>
                                     <p className="text-sm whitespace-pre-wrap">{request.bankDetails}</p>
                                   </div>
+                                 
                                   {request.transactionImage && (
                                     <div>
                                       <Label className="font-medium">Transaction Proof</Label>

@@ -153,7 +153,7 @@ const SectionsDetails = ({
                     className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 px-6 py-3"
                   >
                     <Play className="h-4 w-4 mr-2" />
-                    Buy Course
+                    Add Inquiry
                   </Button>
                 </div>
               ) : (

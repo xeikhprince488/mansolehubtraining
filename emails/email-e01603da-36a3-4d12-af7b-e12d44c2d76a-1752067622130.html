@@ -1,0 +1,166 @@
+
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Payment Request Confirmation</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .email-wrapper { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 30px; text-align: center; }
+          .header h1 { margin: 0; font-size: 28px; }
+          .header p { margin: 10px 0 0 0; font-size: 16px; opacity: 0.9; }
+          .content { padding: 30px; }
+          .info-section { background: #f8f9fa; margin: 20px 0; padding: 25px; border-radius: 8px; border-left: 4px solid #667eea; }
+          .info-section h3 { margin: 0 0 15px 0; color: #333; font-size: 18px; }
+          .info-row { display: flex; justify-content: space-between; margin: 12px 0; padding: 10px 0; border-bottom: 1px solid #eee; }
+          .info-row:last-child { border-bottom: none; }
+          .label { font-weight: bold; color: #555; flex: 1; }
+          .value { color: #333; flex: 2; text-align: right; }
+          .highlight { background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #bbdefb; }
+          .highlight h3 { margin: 0 0 15px 0; color: #1976d2; }
+          .status-badge { background: #ff9800; color: white; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; }
+          .next-steps { background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .next-steps ul { margin: 10px 0; padding-left: 20px; }
+          .next-steps li { margin: 8px 0; }
+          .footer { text-align: center; margin-top: 30px; padding: 20px; background: #f8f9fa; color: #666; font-size: 14px; border-radius: 8px; }
+          .contact-info { background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
+          @media (max-width: 600px) {
+            .container { padding: 10px; }
+            .info-row { flex-direction: column; }
+            .value { text-align: left; margin-top: 5px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="email-wrapper">
+            <div class="header">
+              <h1>🎓 Payment Request Confirmation</h1>
+              <p>Your course enrollment request has been submitted successfully!</p>
+            </div>
+            
+            <div class="content">
+              <div class="highlight">
+                <h3>📋 Request Summary</h3>
+                <div class="info-row">
+                  <span class="label">Request ID:</span>
+                  <span class="value"><strong>e01603da-36a3-4d12-af7b-e12d44c2d76a</strong></span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Course:</span>
+                  <span class="value"><strong>Web</strong></span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Amount:</span>
+                  <span class="value"><strong>PKR 40</strong></span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Status:</span>
+                  <span class="value"><span class="status-badge">Pending Approval</span></span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Submitted:</span>
+                  <span class="value">July 9, 2025 at 06:27 PM</span>
+                </div>
+              </div>
+
+              <div class="info-section">
+                <h3>👤 Personal Information</h3>
+                <div class="info-row">
+                  <span class="label">Full Name:</span>
+                  <span class="value">Mehroz</span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">Father's Name:</span>
+                  <span class="value">Admin</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Email Address:</span>
+                  <span class="value">amhr2606283@gmail.com</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Phone Number:</span>
+                  <span class="value">03056225533</span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">WhatsApp:</span>
+                  <span class="value">03056225533</span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">CNIC Number:</span>
+                  <span class="value">36601-9917308-1</span>
+                </div>
+              </div>
+
+              
+              <div class="info-section">
+                <h3>📍 Additional Details</h3>
+                
+                <div class="info-row">
+                  <span class="label">Date of Birth:</span>
+                  <span class="value">2012-12-31</span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">City:</span>
+                  <span class="value">Burewala</span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">Address:</span>
+                  <span class="value">mb n,m</span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">Qualification:</span>
+                  <span class="value">matric</span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">Occupation:</span>
+                  <span class="value">Studnet </span>
+                </div>
+              </div>
+
+              
+              <div class="info-section">
+                <h3>📝 Personal Notes</h3>
+                <div style="background: white; padding: 15px; border-radius: 5px; border-left: 4px solid #2196f3; font-style: italic; color: #555;">
+                  "j,,m"
+                </div>
+              </div>
+
+              <div class="next-steps">
+                <h3>⏳ What Happens Next?</h3>
+                <ul>
+                  <li><strong>Review Process:</strong> Our team will review your payment request within 2-4 hours</li>
+                  <li><strong>Course Access:</strong> You'll receive course access immediately after approval</li>
+                  <li><strong>Email Updates:</strong> We'll notify you via email about any status changes</li>
+                  <li><strong>Support:</strong> Contact us if you have any questions or concerns</li>
+                </ul>
+              </div>
+
+              <div class="contact-info">
+                <h3>📞 Need Help?</h3>
+                <p><strong>Email:</strong> support@yourdomain.com</p>
+                <p><strong>Phone:</strong> +92-XXX-XXXXXXX</p>
+                <p><strong>WhatsApp:</strong> +92-XXX-XXXXXXX</p>
+              </div>
+
+              <div class="footer">
+                <p><strong>Thank you for choosing our learning platform!</strong></p>
+                <p>This is an automated confirmation email. Please do not reply to this message.</p>
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+                <p style="font-size: 12px; color: #999;">© 2024 Your LMS Platform. All rights reserved.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>
+  

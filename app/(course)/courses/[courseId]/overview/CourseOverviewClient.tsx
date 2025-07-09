@@ -68,7 +68,7 @@ const CourseOverviewClient = ({ course }: CourseOverviewClientProps) => {
           className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
         >
           <Play className="h-4 w-4" />
-          Buy Course
+          Add Inquiry
         </Button>
         
         {/* <form action={`/api/courses/${course.id}/checkout`} method="POST">

@@ -216,6 +216,7 @@ model ManualPaymentRequest {
   city            String?
   qualification   String?
   occupation      String?
+  notes           String?  @db.Text // Add this new field
   courseId        String
   course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   transactionImage String  // URL to uploaded transaction proof
