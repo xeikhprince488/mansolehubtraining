@@ -1,5 +1,4 @@
-import emailjs from '@emailjs/browser';
-
+import emailjs from '@emailjs/browser';    // Send email with template parameters
 interface PaymentConfirmationEmailData {
   studentEmail: string;
   studentName: string;
@@ -21,8 +20,7 @@ interface PaymentConfirmationEmailData {
 // Initialize EmailJS with your public key
 const initEmailJS = () => {
   const publicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
-  console.log('Initializing EmailJS with public key:', publicKey ? 'Present' : 'Missing');
-  if (publicKey) {
+  // Initialize EmailJS with public key  if (publicKey) {
     emailjs.init(publicKey);
     return true;
   }

@@ -36,7 +36,7 @@ const HomeLayout = ({ children }: { children: React.ReactNode }) => {
             {/* Center Logo/Brand */}
             <div className="text-center">
               <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-2">
-                Man Sole Hub Trainings
+                MansolhabTrainings
               </h2>
               <p className="text-gray-400 text-sm">
                 Empowering minds through innovative learning
