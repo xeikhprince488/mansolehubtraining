@@ -1,66 +1,106 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 // import UserCard from "./UserCard";
-import { Card } from "../ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import { Card } from "../ui/card"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button" // Import Button
 
 interface SerializedUser {
-  id: string;
-  firstName: string | null;
-  lastName: string | null;
-  imageUrl: string | null;
-  emailAddress: string | null;
-  role: string;
-  createdAt: number;
+  id: string
+  firstName: string | null
+  lastName: string | null
+  imageUrl: string | null
+  emailAddress: string | null
+  role: string
+  createdAt: number
 }
 
 interface UsersProps {
-  initialUsers: SerializedUser[];
+  initialUsers: SerializedUser[]
 }
 
 interface RoleStyle {
-  bg: string;
-  text: string;
+  bg: string
+  text: string
 }
 
 const getRoleStyle = (role: string): RoleStyle => {
   switch (role.toLowerCase()) {
     case "instructor":
-      return { bg: "bg-purple-100", text: "text-purple-800" };
+      return { bg: "bg-purple-100", text: "text-purple-800" }
     case "teacher":
-      return { bg: "bg-blue-100", text: "text-blue-800" };
+      return { bg: "bg-blue-100", text: "text-blue-800" }
     case "student":
-      return { bg: "bg-green-100", text: "text-green-800" };
+      return { bg: "bg-green-100", text: "text-green-800" }
     default:
-      return { bg: "bg-gray-100", text: "text-gray-800" };
+      return { bg: "bg-gray-100", text: "text-gray-800" }
   }
-};
+}
 
 export default function Users({ initialUsers }: UsersProps) {
-  const [users, setUsers] = useState(initialUsers);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterRole, setFilterRole] = useState("all");
-  const router = useRouter();
+  const [users, setUsers] = useState(initialUsers)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterRole, setFilterRole] = useState("all")
+  const router = useRouter()
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
-      (user.emailAddress?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-      (user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-      (user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
+      user.emailAddress?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      false ||
+      user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      false ||
+      user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      false
 
-    if (filterRole === "all") return matchesSearch;
-    return matchesSearch && user.role.toLowerCase() === filterRole;
-  });
+    if (filterRole === "all") return matchesSearch
+    return matchesSearch && user.role.toLowerCase() === filterRole
+  })
+
+  const handleDownload = () => {
+    if (filteredUsers.length === 0) {
+      alert("No users to download.")
+      return
+    }
+
+    // Define CSV headers
+    const headers = ["ID", "First Name", "Last Name", "Email", "Role", "Joined Date"]
+
+    // Map user data to CSV rows
+    const rows = filteredUsers.map((user) => [
+      user.id,
+      user.firstName || "",
+      user.lastName || "",
+      user.emailAddress || "",
+      user.role,
+      new Date(user.createdAt).toLocaleDateString(),
+    ])
+
+    // Combine headers and rows, escaping commas and newlines in data
+    const csvContent = [
+      headers
+        .map((header) => `"${header.replace(/"/g, '""')}"`)
+        .join(","), // Quote headers
+      ...rows.map(
+        (row) => row.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(","), // Quote and escape fields
+      ),
+    ].join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob)
+      link.setAttribute("href", url)
+      link.setAttribute("download", "users_data.csv")
+      link.style.visibility = "hidden"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -84,12 +124,15 @@ export default function Users({ initialUsers }: UsersProps) {
               <SelectItem value="instructor">Instructors</SelectItem>
             </SelectContent>
           </Select>
+          <Button onClick={handleDownload} className="w-full sm:w-auto">
+            Download Users
+          </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredUsers.map((user) => {
-          const roleStyle = getRoleStyle(user.role);
+          const roleStyle = getRoleStyle(user.role)
           return (
             <Card key={user.id} className="p-6 hover:shadow-lg transition-shadow">
               <div className="flex items-start space-x-4">
@@ -103,14 +146,10 @@ export default function Users({ initialUsers }: UsersProps) {
                   </h3>
                   <p className="text-sm text-gray-500">{user.emailAddress}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <span
-                      className={`px-2 py-1 ${roleStyle.bg} ${roleStyle.text} text-xs rounded-full`}
-                    >
+                    <span className={`px-2 py-1 ${roleStyle.bg} ${roleStyle.text} text-xs rounded-full`}>
                       {user.role}
                     </span>
-                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                      Active
-                    </span>
+                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Active</span>
                   </div>
                   <div className="mt-4 text-xs text-gray-500">
                     Joined: {new Date(user.createdAt).toLocaleDateString()}
@@ -118,7 +157,7 @@ export default function Users({ initialUsers }: UsersProps) {
                 </div>
               </div>
             </Card>
-          );
+          )
         })}
       </div>
 
@@ -128,5 +167,5 @@ export default function Users({ initialUsers }: UsersProps) {
         </div>
       )}
     </div>
-  );
+  )
 }
