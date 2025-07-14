@@ -28,9 +28,15 @@ const Sidebar = () => {
     },
     {
       icon: Users,
+      label: "Users",
+      path: "/instructor/users",
+      description: "Manage all users"
+    },
+    {
+      icon: Users,
       label: "Teachers",
       path: "/instructor/teachers",
-      description: "Manage Teachers "
+      description: "Manage Teachers"
     },
     {
       icon: GraduationCap,
