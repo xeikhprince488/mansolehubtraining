@@ -14,6 +14,18 @@ datasource db {
   relationMode = "prisma"
 }
 
+
+// generator client {
+//   provider = "prisma-client-js"
+// }
+
+// datasource db {
+//   provider  = "postgresql"
+//   url       = env("DATABASE_URL")
+//   directUrl = env("DIRECT_URL")
+// }
+        
+
 model Course {
   id           String  @id @default(uuid())
   instructorId String
@@ -334,3 +346,4 @@ model MeetingPermission {
   @@unique([meetingId, userEmail])
   @@map("meeting_permissions")
 }
+

@@ -43,7 +43,7 @@ const HomeLayout = ({ children }: { children: React.ReactNode }) => {
               </p>
             </div>
 
-            {/* Quick Info here is it  */}
+            {/* Quick Info */}
             <div className="text-center md:text-right">
               <h3 className="text-lg font-semibold mb-4 text-purple-400">Support</h3>
               <div className="space-y-2">

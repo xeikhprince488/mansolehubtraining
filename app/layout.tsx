@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Analytics } from "@vercel/analytics/next"
 
 import "./globals.css";
 import ToasterProvider from "@/components/providers/ToasterProvider";
@@ -23,6 +24,7 @@ export default function RootLayout({
         <body className={inter.className} suppressHydrationWarning={true}>
           <ToasterProvider />
           {children}
+          <Analytics />
         </body>
       </html>
     </ClerkProvider>
