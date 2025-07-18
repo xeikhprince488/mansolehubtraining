@@ -1,5 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import Topbar from "@/components/layout/Topbar";
 import Sidebar from "@/components/layout/Sidebar";
@@ -35,7 +37,11 @@ export default async function InstructorLayout({
         <Topbar />
         <div className="flex-1 flex">
           <Sidebar />
-          <div className="flex-1">{children}</div>
+          <div className="flex-1">
+            {children}
+            <Analytics />
+            <SpeedInsights />
+          </div>
         </div>
       </div>
     );

@@ -1,10 +1,14 @@
 import Topbar from "@/components/layout/Topbar"
+import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const HomeLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <>
       <Topbar />
       {children}
+      <Analytics />
+      <SpeedInsights />
       <footer className="bg-gradient-to-r from-slate-900 via-gray-900 to-slate-900 text-white">
         <div className="container mx-auto px-6 py-12">
           <div className="grid md:grid-cols-3 gap-8 items-center">

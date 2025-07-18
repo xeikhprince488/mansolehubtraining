@@ -34,6 +34,7 @@
     "@types/nodemailer": "^6.4.17",
     "@uploadthing/react": "^6.6.0",
     "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0",
     "axios": "^1.7.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",

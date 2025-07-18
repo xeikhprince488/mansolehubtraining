@@ -4,6 +4,8 @@ import Topbar from "@/components/layout/Topbar";
 import TeacherSidebar from "@/components/layout/TeacherSidebar";
 import StreamVideoProvider from "@/components/providers/StreamVideoProvider";
 import { db } from "@/lib/db";
+import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export default async function TeacherLayout({
   children,
@@ -45,7 +47,11 @@ export default async function TeacherLayout({
         <div className="hidden md:flex h-full w-56 flex-col fixed inset-y-0 z-50">
           <TeacherSidebar />
         </div>
-        <main className="md:pl-56 pt-[80px] h-full">{children}</main>
+        <main className="md:pl-56 pt-[80px] h-full">
+          {children}
+          <Analytics />
+          <SpeedInsights />
+          </main>
       </div>
     </StreamVideoProvider>
   );
