@@ -45,7 +45,28 @@ export const POST = async (
       return new NextResponse("Course not found", { status: 404 });
     }
 
-    // Check if payment request already exists
+    // Check if user already purchased the course
+    const existingPurchase = await db.purchase.findUnique({
+      where: {
+        customerEmail_courseId: {
+          customerEmail: studentEmail,
+          courseId: courseId,
+        },
+      },
+    });
+
+    if (existingPurchase) {
+      return NextResponse.json(
+        { 
+          error: "ALREADY_PURCHASED",
+          message: "You have already purchased this course! You can access it from your dashboard.",
+          redirectUrl: `/courses/${courseId}/sections`
+        }, 
+        { status: 409 }
+      );
+    }
+
+    // Check if payment request already exists and is pending
     const existingRequest = await db.manualPaymentRequest.findFirst({
       where: {
         studentEmail,
@@ -55,7 +76,31 @@ export const POST = async (
     });
 
     if (existingRequest) {
-      return new NextResponse("Payment request already exists", { status: 400 });
+      return NextResponse.json(
+        { 
+          error: "PENDING_APPROVAL",
+          message: "You already have a pending payment request for this course. Please wait for approval.",
+          submittedAt: existingRequest.createdAt,
+          requestId: existingRequest.id
+        }, 
+        { status: 409 }
+      );
+    }
+
+    // Check if there's a rejected request (allow resubmission)
+    const rejectedRequest = await db.manualPaymentRequest.findFirst({
+      where: {
+        studentEmail,
+        courseId,
+        status: "rejected"
+      },
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
+
+    if (rejectedRequest) {
+      console.log(`User ${studentEmail} resubmitting after rejection for course ${courseId}`);
     }
 
     // Create payment request with all fields including notes

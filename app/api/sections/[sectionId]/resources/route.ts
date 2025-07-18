@@ -29,18 +29,32 @@ export const GET = async (
       return new NextResponse("Section Not Found", { status: 404 });
     }
 
-    // Check if user has access to this section
+    // If section is free, return resources immediately
+    if (section.isFree) {
+      return NextResponse.json(section.resources);
+    }
+
+    // For paid sections, get user email and check purchase
+    const { currentUser } = await import("@clerk/nextjs/server");
+    const user = await currentUser();
+    
+    if (!user?.emailAddresses?.[0]?.emailAddress) {
+      return new NextResponse("User email not found", { status: 400 });
+    }
+
+    const customerEmail = user.emailAddresses[0].emailAddress;
+
     const purchase = await db.purchase.findUnique({
       where: {
         customerEmail_courseId: {
-          customerEmail: userId, // This should be email, you might need to get user email
+          customerEmail: customerEmail,
           courseId: section.courseId,
         },
       },
     });
 
     // If section is not free and user hasn't purchased, deny access
-    if (!section.isFree && !purchase) {
+    if (!purchase) {
       return new NextResponse("Access Denied", { status: 403 });
     }
 

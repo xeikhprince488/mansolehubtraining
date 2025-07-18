@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { sendCourseApprovalEmail } from "@/lib/resend-email";
 
 export const POST = async (
   req: NextRequest,
@@ -96,6 +97,26 @@ export const POST = async (
           approvedBy: userId
         }
       });
+
+      // Send course approval email even if student already has access
+      try {
+        const emailResult = await sendCourseApprovalEmail({
+          studentEmail: paymentRequest.studentEmail,
+          studentName: paymentRequest.studentName || 'Student',
+          courseName: course.title,
+          coursePrice: course.price || 0,
+          requestId: params.requestId,
+          courseId: courseId
+        });
+
+        if (emailResult.success) {
+          console.log('Course approval email sent successfully (existing access)');
+        } else {
+          console.error('Failed to send course approval email:', emailResult.error);
+        }
+      } catch (emailError) {
+        console.error('Error sending course approval email:', emailError);
+      }
       
       return NextResponse.json({ 
         message: "Payment approved - student already has access",
@@ -123,6 +144,27 @@ export const POST = async (
     });
 
     console.log("Purchase created:", newPurchase);
+
+    // Send course approval email
+    try {
+      const emailResult = await sendCourseApprovalEmail({
+        studentEmail: paymentRequest.studentEmail,
+        studentName: paymentRequest.studentName || 'Student',
+        courseName: course.title,
+        coursePrice: course.price || 0,
+        requestId: params.requestId,
+        courseId: courseId
+      });
+
+      if (emailResult.success) {
+        console.log('Course approval email sent successfully');
+      } else {
+        console.error('Failed to send course approval email:', emailResult.error);
+      }
+    } catch (emailError) {
+      console.error('Error sending course approval email:', emailError);
+      // Don't fail the approval process if email fails
+    }
 
     return NextResponse.json({ 
       message: "Payment approved and course access granted successfully!",

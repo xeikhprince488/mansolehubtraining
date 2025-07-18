@@ -14,7 +14,7 @@ import toast from "react-hot-toast";
 import { Course } from "@prisma/client";
 import FileUpload from "../custom/FileUpload";
 import { generateDeviceFingerprint } from "@/lib/deviceFingerprint";
-import { sendPaymentConfirmationEmail } from "@/lib/email-client";
+
 
 interface ManualPaymentFormProps {
   course: Course;
@@ -183,19 +183,32 @@ const ManualPaymentForm = ({ course, onClose, onSubmitted }: ManualPaymentFormPr
       // Get the request ID from the response
       const requestId = response.data.requestId || `req-${Date.now()}`;
 
-      // Send email using client-side EmailJS
-      const emailResult = await sendPaymentConfirmationEmail({
-        ...formData,
-        courseName: course.title,
-        coursePrice: course.price!,
-        requestId: requestId
-      });
+      // Send email via server-side API
+      try {
+        const emailResponse = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...formData,
+            courseName: course.title,
+            coursePrice: course.price!,
+            requestId: requestId
+          }),
+        });
 
-      if (emailResult.success) {
-        console.log('Confirmation email sent successfully');
-      } else {
-        console.error('Failed to send confirmation email:', emailResult.error);
-        // Don't fail the entire process if email fails
+        const emailResult = await emailResponse.json();
+
+        if (emailResult.success) {
+          console.log('Confirmation email sent successfully');
+        } else {
+          console.error('Failed to send confirmation email:', emailResult.error);
+          // Don't fail the entire process if email fails
+          toast.error('Payment submitted but email notification failed');
+        }
+      } catch (emailError) {
+        console.error('Email API error:', emailError);
         toast.error('Payment submitted but email notification failed');
       }
 
@@ -203,9 +216,36 @@ const ManualPaymentForm = ({ course, onClose, onSubmitted }: ManualPaymentFormPr
       toast.success("Payment request submitted successfully!");
       onClose();
       onSubmitted?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Payment submission error:", error);
-      toast.error("Failed to submit payment request");
+      
+      // Handle specific error cases
+      if (error.response?.status === 409) {
+        const errorData = error.response.data;
+        
+        if (errorData.error === "ALREADY_PURCHASED") {
+          toast.success("🎉 Great news! You already own this course!");
+          setTimeout(() => {
+            window.location.href = errorData.redirectUrl || `/courses/${course.id}`;
+          }, 2000);
+          onClose();
+          return;
+        }
+        
+        if (errorData.error === "PENDING_APPROVAL") {
+          const submittedDate = new Date(errorData.submittedAt).toLocaleDateString();
+          toast.error(
+            `You already have a pending payment request for this course (submitted on ${submittedDate}). Please wait for approval.`,
+            { duration: 6000 }
+          );
+          onClose();
+          return;
+        }
+      }
+      
+      // Generic error handling
+      const errorMessage = error.response?.data?.message || "Failed to submit payment request";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
